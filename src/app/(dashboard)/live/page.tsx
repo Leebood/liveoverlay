@@ -13,6 +13,7 @@ import {
   StopOutlined,
 } from '@ant-design/icons';
 import { useSession } from 'next-auth/react';
+import { useStore } from '@/hooks/useStore';
 import FeatureGate from '@/components/common/FeatureGate';
 import type { PlanType } from '@/types/plan';
 
@@ -29,19 +30,20 @@ interface Product {
 export default function LivePage() {
   const { data: session } = useSession();
   const planType = ((session?.user as Record<string, unknown>)?.planType || 'free') as PlanType;
+  const { storeId, loading: storeLoading } = useStore();
   const [isLive, setIsLive] = useState(false);
   const [products, setProducts] = useState<Product[]>([]);
   const [countdownModal, setCountdownModal] = useState(false);
   const [countdownSeconds, setCountdownSeconds] = useState(300);
   const [countdownText, setCountdownText] = useState('限时优惠');
-  const storeId = 'default';
 
   useEffect(() => {
+    if (!storeId) return;
     fetch(`/api/products?storeId=${storeId}`)
       .then(r => r.json())
       .then(data => { if (data.products) setProducts(data.products); })
       .catch(() => {});
-  }, []);
+  }, [storeId]);
 
   const sendControl = useCallback(async (action: string, payload: Record<string, unknown> = {}) => {
     try {

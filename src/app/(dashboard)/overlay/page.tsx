@@ -7,6 +7,7 @@ import { PlusOutlined, CopyOutlined, EyeOutlined, SettingOutlined } from '@ant-d
 import { useSession } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
 import { getPlanLimits } from '@/lib/plan-limits';
+import { useStore } from '@/hooks/useStore';
 import type { PlanType } from '@/types/plan';
 
 const { Title, Paragraph, Text } = Typography;
@@ -29,14 +30,15 @@ export default function OverlayPage() {
   const router = useRouter();
   const planType = ((session?.user as Record<string, unknown>)?.planType || 'free') as PlanType;
   const limits = getPlanLimits(planType);
+  const { storeId, loading: storeLoading } = useStore();
 
   const [overlays, setOverlays] = useState<Overlay[]>([]);
   const [createModalOpen, setCreateModalOpen] = useState(false);
   const [form] = Form.useForm();
   const [templates, setTemplates] = useState<{ id: string; name: string; componentType: string }[]>([]);
-  const storeId = 'default';
 
   useEffect(() => {
+    if (!storeId) return;
     Promise.all([
       fetch(`/api/overlay?storeId=${storeId}`).then(r => r.json()),
       fetch('/api/templates').then(r => r.json()),
@@ -50,7 +52,7 @@ export default function OverlayPage() {
         })));
       }
     });
-  }, []);
+  }, [storeId]);
 
   const handleCreate = async (values: Record<string, unknown>) => {
     try {
@@ -74,6 +76,9 @@ export default function OverlayPage() {
       message.error('网络错误');
     }
   };
+
+  if (storeLoading) return <div className="p-6 text-gray-500">加载中...</div>;
+  if (!storeId) return <div className="p-6 text-gray-500">未找到店铺信息，请刷新页面重试</div>;
 
   const copyOverlayUrl = (overlay: Overlay) => {
     const url = `${window.location.origin}/overlay/${storeId}/${overlay.id}`;

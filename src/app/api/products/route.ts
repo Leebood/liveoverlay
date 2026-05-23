@@ -5,6 +5,7 @@ import { getSupabaseClient } from '@/storage/database/supabase-client';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { isWithinLimit } from '@/lib/plan-limits';
+import { friendlyDbError } from '@/lib/db-errors';
 import type { PlanType } from '@/types/plan';
 
 // GET /api/products?storeId=xxx
@@ -30,11 +31,11 @@ export async function GET(request: Request) {
       .eq('is_active', true)
       .order('sort_order', { ascending: true });
 
-    if (error) throw new Error(`查询商品失败: ${error.message}`);
+    if (error) throw new Error(friendlyDbError('查询商品', error.message));
 
     return NextResponse.json({ products: data });
   } catch (err) {
-    const message = err instanceof Error ? err.message : 'Unknown error';
+    const message = err instanceof Error ? err.message : '操作失败，请稍后再试';
     return NextResponse.json({ error: message }, { status: 500 });
   }
 }
@@ -64,7 +65,7 @@ export async function POST(request: Request) {
       .eq('store_id', storeId)
       .eq('is_active', true);
 
-    if (countError) throw new Error(`统计商品失败: ${countError.message}`);
+    if (countError) throw new Error(friendlyDbError('统计商品', countError.message));
 
     if (!isWithinLimit(planType, 'maxProducts', count || 0)) {
       return NextResponse.json({ error: '商品数量已达上限，请升级计划' }, { status: 403 });
@@ -86,11 +87,11 @@ export async function POST(request: Request) {
       .select()
       .single();
 
-    if (error) throw new Error(`创建商品失败: ${error.message}`);
+    if (error) throw new Error(friendlyDbError('创建商品', error.message));
 
     return NextResponse.json({ product: data }, { status: 201 });
   } catch (err) {
-    const message = err instanceof Error ? err.message : 'Unknown error';
+    const message = err instanceof Error ? err.message : '操作失败，请稍后再试';
     return NextResponse.json({ error: message }, { status: 500 });
   }
 }

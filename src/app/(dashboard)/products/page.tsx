@@ -6,6 +6,7 @@ import { Table, Button, Modal, Form, Input, InputNumber, Upload, Tag, Space, mes
 import { PlusOutlined, EditOutlined, DeleteOutlined, UploadOutlined } from '@ant-design/icons';
 import { useSession } from 'next-auth/react';
 import { getPlanLimits } from '@/lib/plan-limits';
+import { useStore } from '@/hooks/useStore';
 import type { PlanType } from '@/types/plan';
 
 interface Product {
@@ -28,6 +29,7 @@ export default function ProductsPage() {
   const { data: session } = useSession();
   const planType = ((session?.user as Record<string, unknown>)?.planType || 'free') as PlanType;
   const limits = getPlanLimits(planType);
+  const { storeId, loading: storeLoading } = useStore();
 
   const [products, setProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(false);
@@ -35,9 +37,8 @@ export default function ProductsPage() {
   const [editingProduct, setEditingProduct] = useState<Product | null>(null);
   const [form] = Form.useForm();
 
-  const storeId = 'default'; // TODO: get from context
-
   const fetchProducts = useCallback(async () => {
+    if (!storeId) return;
     setLoading(true);
     try {
       const res = await fetch(`/api/products?storeId=${storeId}`);
@@ -55,6 +56,9 @@ export default function ProductsPage() {
   useEffect(() => {
     fetchProducts();
   }, [fetchProducts]);
+
+  if (storeLoading) return <div className="p-6 text-gray-500">加载中...</div>;
+  if (!storeId) return <div className="p-6 text-gray-500">未找到店铺信息，请刷新页面重试</div>;
 
   const handleSubmit = async (values: Record<string, unknown>) => {
     try {

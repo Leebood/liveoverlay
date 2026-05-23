@@ -5,6 +5,7 @@ import { getSupabaseClient } from '@/storage/database/supabase-client';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { isTemplateAllowed } from '@/lib/plan-limits';
+import { friendlyDbError } from '@/lib/db-errors';
 import type { PlanType } from '@/types/plan';
 
 // GET /api/overlay?storeId=xxx
@@ -12,14 +13,14 @@ export async function GET(request: Request) {
   try {
     const session = await getServerSession(authOptions);
     if (!session?.user) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+      return NextResponse.json({ error: '请先登录' }, { status: 401 });
     }
 
     const { searchParams } = new URL(request.url);
     const storeId = searchParams.get('storeId');
 
     if (!storeId) {
-      return NextResponse.json({ error: 'storeId is required' }, { status: 400 });
+      return NextResponse.json({ error: '缺少店铺信息' }, { status: 400 });
     }
 
     const supabase = getSupabaseClient();
@@ -29,11 +30,11 @@ export async function GET(request: Request) {
       .eq('store_id', storeId)
       .eq('is_active', true);
 
-    if (error) throw new Error(`查询Overlay失败: ${error.message}`);
+    if (error) throw new Error(friendlyDbError('查询Overlay', error.message));
 
     return NextResponse.json({ overlays: data });
   } catch (err) {
-    const message = err instanceof Error ? err.message : 'Unknown error';
+    const message = err instanceof Error ? err.message : '操作失败，请稍后再试';
     return NextResponse.json({ error: message }, { status: 500 });
   }
 }
@@ -43,14 +44,14 @@ export async function POST(request: Request) {
   try {
     const session = await getServerSession(authOptions);
     if (!session?.user) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+      return NextResponse.json({ error: '请先登录' }, { status: 401 });
     }
 
     const body = await request.json();
     const { storeId, name, templateId, componentType, config, productIds, width, height } = body;
 
     if (!storeId || !name || !templateId) {
-      return NextResponse.json({ error: 'storeId, name, and templateId are required' }, { status: 400 });
+      return NextResponse.json({ error: '店铺、名称和模板为必填项' }, { status: 400 });
     }
 
     // Check template access
@@ -75,11 +76,11 @@ export async function POST(request: Request) {
       .select()
       .single();
 
-    if (error) throw new Error(`创建Overlay失败: ${error.message}`);
+    if (error) throw new Error(friendlyDbError('创建Overlay', error.message));
 
     return NextResponse.json({ overlay: data }, { status: 201 });
   } catch (err) {
-    const message = err instanceof Error ? err.message : 'Unknown error';
+    const message = err instanceof Error ? err.message : '操作失败，请稍后再试';
     return NextResponse.json({ error: message }, { status: 500 });
   }
 }

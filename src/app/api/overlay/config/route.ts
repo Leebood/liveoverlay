@@ -5,6 +5,7 @@ import { getSupabaseClient } from '@/storage/database/supabase-client';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { getTemplateDefinition } from '@/overlay-engine/registry';
+import { friendlyDbError } from '@/lib/db-errors';
 
 // GET /api/overlay/config?overlayId=xxx
 export async function GET(request: Request) {
@@ -28,9 +29,9 @@ export async function GET(request: Request) {
       .eq('id', overlayId)
       .maybeSingle();
 
-    if (error) throw new Error(`查询Overlay配置失败: ${error.message}`);
+    if (error) throw new Error(friendlyDbError('查询Overlay配置', error.message));
     if (!data) {
-      return NextResponse.json({ error: 'Overlay not found' }, { status: 404 });
+      return NextResponse.json({ error: 'Overlay不存在' }, { status: 404 });
     }
 
     // Get template schema for the config UI
@@ -41,7 +42,7 @@ export async function GET(request: Request) {
       templateSchema: templateDef?.configSchema || [],
     });
   } catch (err) {
-    const message = err instanceof Error ? err.message : 'Unknown error';
+    const message = err instanceof Error ? err.message : '操作失败，请稍后再试';
     return NextResponse.json({ error: message }, { status: 500 });
   }
 }
@@ -51,14 +52,14 @@ export async function PUT(request: Request) {
   try {
     const session = await getServerSession(authOptions);
     if (!session?.user) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+      return NextResponse.json({ error: '请先登录' }, { status: 401 });
     }
 
     const body = await request.json();
     const { overlayId, config, productIds, name, width, height, positionX, positionY } = body;
 
     if (!overlayId) {
-      return NextResponse.json({ error: 'overlayId is required' }, { status: 400 });
+      return NextResponse.json({ error: '缺少Overlay ID' }, { status: 400 });
     }
 
     const updateData: Record<string, unknown> = {};
@@ -78,11 +79,11 @@ export async function PUT(request: Request) {
       .select()
       .single();
 
-    if (error) throw new Error(`更新Overlay配置失败: ${error.message}`);
+    if (error) throw new Error(friendlyDbError('更新Overlay配置', error.message));
 
     return NextResponse.json({ overlay: data });
   } catch (err) {
-    const message = err instanceof Error ? err.message : 'Unknown error';
+    const message = err instanceof Error ? err.message : '操作失败，请稍后再试';
     return NextResponse.json({ error: message }, { status: 500 });
   }
 }
