@@ -2,11 +2,16 @@
 
 import { NextResponse } from 'next/server';
 import { getSupabaseClient } from '@/storage/database/supabase-client';
-import Stripe from 'stripe';
+import { isStripeConfigured, getStripeClient } from '@/lib/stripe';
 
 // POST /api/billing/webhook
 export async function POST(request: Request) {
   try {
+    // Demo mode: no Stripe configured
+    if (!isStripeConfigured()) {
+      return NextResponse.json({ received: true, demo: true });
+    }
+
     const body = await request.text();
     const sig = request.headers.get('stripe-signature');
 
@@ -14,12 +19,13 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Missing signature' }, { status: 400 });
     }
 
-    const stripe = new Stripe(process.env.STRIPE_SECRET_KEY || '', {
-      apiVersion: '2026-04-22.dahlia',
-    });
+    const stripe = getStripeClient();
+    if (!stripe) {
+      return NextResponse.json({ error: 'Stripe not configured' }, { status: 500 });
+    }
 
     const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET || '';
-    let event: Stripe.Event;
+    let event: import('stripe').Stripe.Event;
 
     try {
       event = stripe.webhooks.constructEvent(body, sig, webhookSecret);
@@ -31,21 +37,21 @@ export async function POST(request: Request) {
 
     switch (event.type) {
       case 'checkout.session.completed': {
-        const session = event.data.object as Stripe.Checkout.Session;
-        if (session.metadata?.userId && session.metadata?.planType) {
+        const cs = event.data.object as import('stripe').Stripe.Checkout.Session;
+        if (cs.metadata?.userId && cs.metadata?.planType) {
           await supabase
             .from('users')
             .update({
-              plan_type: session.metadata.planType,
+              plan_type: cs.metadata.planType,
               subscription_status: 'active',
-              stripe_subscription_id: session.subscription as string,
+              stripe_subscription_id: cs.subscription as string,
             })
-            .eq('id', session.metadata.userId);
+            .eq('id', cs.metadata.userId);
         }
         break;
       }
       case 'customer.subscription.deleted': {
-        const sub = event.data.object as Stripe.Subscription;
+        const sub = event.data.object as import('stripe').Stripe.Subscription;
         await supabase
           .from('users')
           .update({
@@ -56,7 +62,7 @@ export async function POST(request: Request) {
         break;
       }
       case 'customer.subscription.updated': {
-        const sub = event.data.object as Stripe.Subscription;
+        const sub = event.data.object as import('stripe').Stripe.Subscription;
         const status = sub.status === 'active' ? 'active' : 'inactive';
         await supabase
           .from('users')

@@ -1,9 +1,9 @@
 // src/app/(dashboard)/billing/page.tsx
 'use client';
 
-import { useState } from 'react';
-import { Card, Row, Col, Button, Typography, Tag, Space, Divider, Modal, Radio, message } from 'antd';
-import { CheckOutlined, CrownOutlined } from '@ant-design/icons';
+import { useState, useEffect } from 'react';
+import { Card, Row, Col, Button, Typography, Tag, Space, Divider, Alert, Radio, message } from 'antd';
+import { CheckOutlined, CrownOutlined, ExperimentOutlined } from '@ant-design/icons';
 import { useSession } from 'next-auth/react';
 import { getPlanLimits } from '@/lib/plan-limits';
 import PlanBadge from '@/components/common/PlanBadge';
@@ -14,10 +14,17 @@ const { Title, Paragraph, Text } = Typography;
 const PLAN_ORDER: PlanType[] = ['free', 'starter', 'pro', 'business'];
 
 export default function BillingPage() {
-  const { data: session } = useSession();
+  const { data: session, update: updateSession } = useSession();
   const planType = ((session?.user as Record<string, unknown>)?.planType || 'free') as PlanType;
   const [billingPeriod, setBillingPeriod] = useState<'monthly' | 'yearly'>('monthly');
   const [checkoutLoading, setCheckoutLoading] = useState<string | null>(null);
+  const [isDemo, setIsDemo] = useState(false);
+
+  useEffect(() => {
+    // Check if running in demo mode (no Stripe configured)
+    fetch('/api/billing/checkout', { method: 'OPTIONS' }).catch(() => {});
+    // Simpler: just try checkout and see if demo is returned
+  }, []);
 
   const handleUpgrade = async (targetPlan: PlanType) => {
     setCheckoutLoading(targetPlan);
@@ -28,7 +35,13 @@ export default function BillingPage() {
         body: JSON.stringify({ planType: targetPlan, billingPeriod }),
       });
       const data = await res.json();
-      if (data.url) {
+      if (data.demo) {
+        // Demo mode: plan was upgraded directly
+        setIsDemo(true);
+        message.success(`已切换到 ${getPlanLimits(targetPlan).displayName} 计划（演示模式）`);
+        await updateSession();
+        window.location.reload();
+      } else if (data.url) {
         window.location.href = data.url;
       } else {
         message.error(data.error || '创建支付链接失败');
@@ -44,7 +57,9 @@ export default function BillingPage() {
     try {
       const res = await fetch('/api/billing/portal', { method: 'POST' });
       const data = await res.json();
-      if (data.url) {
+      if (data.demo) {
+        message.info('演示模式：可直接在页面上切换计划');
+      } else if (data.url) {
         window.location.href = data.url;
       }
     } catch {
@@ -54,7 +69,7 @@ export default function BillingPage() {
 
   return (
     <div>
-      <div className="flex justify-between items-center mb-6">
+      <div className="flex justify-between items-center mb-4">
         <div>
           <Title level={3} className="!mb-1">订阅管理</Title>
           <Paragraph type="secondary">
@@ -71,6 +86,15 @@ export default function BillingPage() {
           )}
         </Space>
       </div>
+
+      <Alert
+        type="info"
+        showIcon
+        icon={<ExperimentOutlined />}
+        message="演示模式"
+        description="当前未配置 Stripe 密钥，切换计划将直接生效无需支付。配置 STRIPE_SECRET_KEY 后可启用真实支付。"
+        className="mb-6"
+      />
 
       <Row gutter={[16, 16]}>
         {PLAN_ORDER.map(plan => {

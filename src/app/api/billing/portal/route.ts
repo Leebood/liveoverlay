@@ -4,7 +4,7 @@ import { NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { getSupabaseClient } from '@/storage/database/supabase-client';
-import Stripe from 'stripe';
+import { isStripeConfigured, getStripeClient } from '@/lib/stripe';
 
 // POST /api/billing/portal
 export async function POST() {
@@ -14,25 +14,35 @@ export async function POST() {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
+    // Demo mode: no Stripe configured
+    if (!isStripeConfigured()) {
+      return NextResponse.json({
+        url: '/billing?demo=true',
+        demo: true,
+        message: 'Demo mode: manage your plan directly from the billing page',
+      });
+    }
+
     const supabase = getSupabaseClient();
     const { data: user } = await supabase
       .from('users')
-      .select('stripe_customer_id')
+      .select('id, stripe_customer_id')
       .eq('email', session.user.email)
       .maybeSingle();
 
     if (!user?.stripe_customer_id) {
-      return NextResponse.json({ error: 'No billing account found' }, { status: 404 });
+      return NextResponse.json({ error: 'No Stripe customer found' }, { status: 404 });
     }
 
-    const stripe = new Stripe(process.env.STRIPE_SECRET_KEY || '', {
-      apiVersion: '2026-04-22.dahlia',
-    });
+    const stripe = getStripeClient();
+    if (!stripe) {
+      return NextResponse.json({ error: 'Stripe not configured' }, { status: 500 });
+    }
 
-    const appUrl = process.env.NEXT_PUBLIC_APP_URL || process.env.COZE_PROJECT_DOMAIN_DEFAULT || 'http://localhost:5000';
+    const appUrl = process.env.COZE_PROJECT_DOMAIN_DEFAULT || 'http://localhost:5000';
 
     const portalSession = await stripe.billingPortal.sessions.create({
-      customer: user.stripe_customer_id,
+      customer: user.stripe_customer_id as string,
       return_url: `${appUrl}/billing`,
     });
 

@@ -2,7 +2,7 @@
 'use client';
 
 import { useState } from 'react';
-import { Form, Input, Button, Card, Typography, Divider, message } from 'antd';
+import { Form, Input, Button, Card, Typography, message } from 'antd';
 import { MailOutlined, LockOutlined, UserOutlined } from '@ant-design/icons';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
@@ -16,11 +16,21 @@ export default function RegisterPage() {
   const handleRegister = async (values: { name: string; email: string; password: string }) => {
     setLoading(true);
     try {
-      // In production, create user via API
-      message.success('注册成功！请登录');
-      router.push('/login');
+      const res = await fetch('/api/auth/register', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(values),
+      });
+      const data = await res.json();
+
+      if (res.ok && data.success) {
+        message.success('注册成功！请登录');
+        router.push('/login');
+      } else {
+        message.error(data.error || '注册失败');
+      }
     } catch {
-      message.error('注册失败');
+      message.error('网络错误');
     } finally {
       setLoading(false);
     }

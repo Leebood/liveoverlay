@@ -3,6 +3,7 @@
 import type { NextAuthOptions } from 'next-auth';
 import CredentialsProvider from 'next-auth/providers/credentials';
 import { getSupabaseClient } from '@/storage/database/supabase-client';
+import { createHash } from 'crypto';
 
 export const authOptions: NextAuthOptions = {
   providers: [
@@ -21,11 +22,18 @@ export const authOptions: NextAuthOptions = {
           const supabase = getSupabaseClient();
           const { data, error } = await supabase
             .from('users')
-            .select('id, email, name, image, plan_type')
+            .select('id, email, name, image, plan_type, auth_provider_id')
             .eq('email', credentials.email)
+            .eq('auth_provider', 'email')
             .maybeSingle();
 
           if (error || !data) {
+            return null;
+          }
+
+          // Verify password (SHA-256 hash; use bcrypt in production)
+          const hashedPassword = createHash('sha256').update(credentials.password).digest('hex');
+          if (data.auth_provider_id !== hashedPassword) {
             return null;
           }
 
