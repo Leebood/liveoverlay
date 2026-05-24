@@ -2,8 +2,8 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { Card, Row, Col, Tag, Button, Typography, Space, Tabs } from 'antd';
-import { EyeOutlined, CheckOutlined, LockOutlined } from '@ant-design/icons';
+import { Card, Row, Col, Tag, Button, Typography, Space, Tabs, Modal, Descriptions } from 'antd';
+import { CheckOutlined, LockOutlined, InfoCircleOutlined, EyeOutlined } from '@ant-design/icons';
 import { useSession } from 'next-auth/react';
 import { isTemplateAllowed } from '@/lib/plan-limits';
 import type { PlanType } from '@/types/plan';
@@ -27,11 +27,357 @@ const PLAN_TAG_COLORS: Record<string, string> = {
   business: 'gold',
 };
 
+const TEMPLATE_DISPLAY_NAMES: Record<string, string> = {
+  'basic-ticker': '经典滚动条',
+  'modern-ticker': '现代滚动条',
+  'minimal-ticker': '极简滚动条',
+  'minimal-card': '简约商品卡',
+  'spotlight-card': '聚光灯商品卡',
+  'simple-badge': '促销角标',
+  'side-list': '侧边商品列表',
+  'top-promo': '顶部促销横幅',
+  'countdown-banner': '倒计时横幅',
+  'promo-countdown': '促销倒计时',
+};
+
+/* ── CSS 实时预览组件 ── */
+function TickerPreview({ templateId }: { templateId: string }) {
+  const isModern = templateId === 'modern-ticker';
+  const isMinimal = templateId === 'minimal-ticker';
+  return (
+    <div
+      className="w-full h-40 overflow-hidden relative"
+      style={{ background: isMinimal ? '#1a1a2e' : '#0d1117' }}
+    >
+      {/* 模拟直播画面背景 */}
+      <div className="absolute inset-0 opacity-20"
+        style={{
+          background: 'linear-gradient(135deg, #667eea 0%, #764ba2 50%, #f093fb 100%)',
+        }}
+      />
+      {/* 商品滚动条 */}
+      <div
+        className="absolute bottom-0 left-0 right-0 flex items-center"
+        style={{
+          height: isMinimal ? 36 : 44,
+          background: isModern
+            ? 'linear-gradient(90deg, rgba(22,119,255,0.9), rgba(114,46,209,0.9))'
+            : isMinimal
+              ? 'rgba(26,26,46,0.95)'
+              : 'rgba(0,0,0,0.85)',
+          borderBottom: isModern ? '2px solid #4096ff' : 'none',
+        }}
+      >
+        {isMinimal ? (
+          <>
+            <span style={{ color: '#52c41a', fontSize: 11, fontWeight: 700, padding: '0 8px' }}>限时</span>
+            <span style={{ color: '#fff', fontSize: 12, padding: '0 4px' }}>连衣裙</span>
+            <span style={{ color: '#ff4d4f', fontSize: 13, fontWeight: 700, padding: '0 4px' }}>¥199</span>
+            <span style={{ color: '#8c8c8c', fontSize: 10, textDecoration: 'line-through', padding: '0 4px' }}>¥399</span>
+            <span style={{ color: '#fff', fontSize: 11, padding: '0 8px' }}>运动鞋</span>
+            <span style={{ color: '#ff4d4f', fontSize: 13, fontWeight: 700, padding: '0 4px' }}>¥299</span>
+          </>
+        ) : (
+          <>
+            <div
+              style={{
+                background: isModern ? 'rgba(255,255,255,0.2)' : '#ff4d4f',
+                color: '#fff',
+                padding: '2px 10px',
+                fontSize: 11,
+                fontWeight: 700,
+                borderRadius: isModern ? 4 : 0,
+                margin: '0 8px',
+              }}
+            >
+              HOT
+            </div>
+            <span style={{ color: '#fff', fontSize: 13, fontWeight: 600, margin: '0 6px' }}>限时特惠连衣裙</span>
+            <span style={{ color: '#ff4d4f', fontSize: 15, fontWeight: 700, margin: '0 4px' }}>¥199</span>
+            <span style={{ color: '#8c8c8c', fontSize: 11, textDecoration: 'line-through', margin: '0 6px' }}>¥399</span>
+            <div style={{ width: 1, height: 20, background: 'rgba(255,255,255,0.2)', margin: '0 8px' }} />
+            <span style={{ color: '#fff', fontSize: 13, fontWeight: 600, margin: '0 6px' }}>运动鞋</span>
+            <span style={{ color: '#ff4d4f', fontSize: 15, fontWeight: 700, margin: '0 4px' }}>¥299</span>
+          </>
+        )}
+        {/* 滚动动画指示 */}
+        <div style={{ position: 'absolute', right: 8, top: '50%', transform: 'translateY(-50%)' }}>
+          <span style={{ color: 'rgba(255,255,255,0.4)', fontSize: 16 }}>→</span>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function ProductCardPreview({ templateId }: { templateId: string }) {
+  const isSpotlight = templateId === 'spotlight-card';
+  return (
+    <div
+      className="w-full h-40 overflow-hidden relative"
+      style={{ background: '#0d1117' }}
+    >
+      <div className="absolute inset-0 opacity-20"
+        style={{ background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)' }}
+      />
+      <div
+        className="absolute"
+        style={{
+          right: isSpotlight ? 12 : 10,
+          bottom: isSpotlight ? 16 : 20,
+          width: isSpotlight ? 140 : 120,
+          borderRadius: 8,
+          overflow: 'hidden',
+          background: isSpotlight
+            ? 'linear-gradient(135deg, rgba(22,119,255,0.95), rgba(114,46,209,0.95))'
+            : 'rgba(255,255,255,0.95)',
+          boxShadow: isSpotlight ? '0 4px 24px rgba(22,119,255,0.4)' : '0 2px 12px rgba(0,0,0,0.3)',
+        }}
+      >
+        {/* 模拟商品图 */}
+        <div
+          style={{
+            height: isSpotlight ? 50 : 40,
+            background: isSpotlight
+              ? 'linear-gradient(135deg, #f5f5f5, #e8e8e8)'
+              : 'linear-gradient(135deg, #e8f4fd, #c3e0f5)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            fontSize: 20,
+          }}
+        >
+          {isSpotlight ? '👗' : '👟'}
+        </div>
+        <div style={{ padding: '6px 8px' }}>
+          <div style={{
+            fontSize: 10,
+            fontWeight: 600,
+            color: isSpotlight ? '#fff' : '#1a1a1a',
+            whiteSpace: 'nowrap',
+            overflow: 'hidden',
+            textOverflow: 'ellipsis',
+          }}>
+            限时特惠连衣裙
+          </div>
+          <div style={{ display: 'flex', alignItems: 'baseline', gap: 4, marginTop: 2 }}>
+            <span style={{
+              fontSize: 14,
+              fontWeight: 700,
+              color: isSpotlight ? '#ffd700' : '#ff4d4f',
+            }}>¥199</span>
+            <span style={{
+              fontSize: 9,
+              textDecoration: 'line-through',
+              color: isSpotlight ? 'rgba(255,255,255,0.5)' : '#999',
+            }}>¥399</span>
+          </div>
+        </div>
+      </div>
+      {isSpotlight && (
+        <div
+          className="absolute"
+          style={{
+            right: 12,
+            top: 20,
+            background: 'rgba(255,77,79,0.9)',
+            color: '#fff',
+            fontSize: 9,
+            fontWeight: 700,
+            padding: '2px 8px',
+            borderRadius: 4,
+          }}
+        >
+          限时
+        </div>
+      )}
+    </div>
+  );
+}
+
+function BadgePreview() {
+  return (
+    <div
+      className="w-full h-40 overflow-hidden relative"
+      style={{ background: '#0d1117' }}
+    >
+      <div className="absolute inset-0 opacity-20"
+        style={{ background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)' }}
+      />
+      <div
+        className="absolute"
+        style={{
+          top: 12,
+          right: 12,
+          background: 'linear-gradient(135deg, #ff4d4f, #cf1322)',
+          borderRadius: 6,
+          padding: '4px 12px',
+          boxShadow: '0 2px 12px rgba(255,77,79,0.5)',
+        }}
+      >
+        <div style={{ color: '#fff', fontSize: 9, fontWeight: 600, opacity: 0.8 }}>限时</div>
+        <div style={{ color: '#ffd700', fontSize: 18, fontWeight: 800, lineHeight: 1.1 }}>5折</div>
+      </div>
+      <div
+        className="absolute"
+        style={{
+          bottom: 30,
+          left: 20,
+          background: 'rgba(0,0,0,0.6)',
+          borderRadius: 4,
+          padding: '4px 10px',
+        }}
+      >
+        <div style={{ color: '#fff', fontSize: 11, fontWeight: 600 }}>连衣裙</div>
+        <div style={{ color: '#ff4d4f', fontSize: 14, fontWeight: 700 }}>¥199</div>
+      </div>
+    </div>
+  );
+}
+
+function SideListPreview() {
+  return (
+    <div
+      className="w-full h-40 overflow-hidden relative"
+      style={{ background: '#0d1117' }}
+    >
+      <div className="absolute inset-0 opacity-20"
+        style={{ background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)' }}
+      />
+      <div
+        className="absolute"
+        style={{
+          left: 8,
+          top: 10,
+          bottom: 10,
+          width: 110,
+          background: 'rgba(0,0,0,0.8)',
+          borderRadius: 8,
+          padding: 8,
+          display: 'flex',
+          flexDirection: 'column',
+          gap: 6,
+        }}
+      >
+        {['连衣裙 ¥199', '运动鞋 ¥299', '手提包 ¥159'].map((item, i) => (
+          <div
+            key={i}
+            style={{
+              background: i === 0 ? 'rgba(22,119,255,0.3)' : 'rgba(255,255,255,0.05)',
+              borderRadius: 4,
+              padding: '3px 6px',
+              display: 'flex',
+              alignItems: 'center',
+              gap: 4,
+            }}
+          >
+            <div style={{
+              width: 18, height: 18, borderRadius: 3,
+              background: 'linear-gradient(135deg, #f0f0f0, #d9d9d9)',
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              fontSize: 8,
+            }}>
+              {['👗', '👟', '👜'][i]}
+            </div>
+            <span style={{ color: i === 0 ? '#4096ff' : '#ccc', fontSize: 9, fontWeight: i === 0 ? 600 : 400 }}>
+              {item}
+            </span>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function BannerPreview({ templateId }: { templateId: string }) {
+  const isCountdown = templateId === 'countdown-banner' || templateId === 'promo-countdown';
+  return (
+    <div
+      className="w-full h-40 overflow-hidden relative"
+      style={{ background: '#0d1117' }}
+    >
+      <div className="absolute inset-0 opacity-20"
+        style={{ background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)' }}
+      />
+      <div
+        className="absolute left-0 right-0 flex items-center justify-center"
+        style={{
+          top: isCountdown ? 40 : 10,
+          height: isCountdown ? 56 : 40,
+          background: isCountdown
+            ? 'linear-gradient(90deg, rgba(255,77,79,0.9), rgba(250,84,28,0.9))'
+            : 'linear-gradient(90deg, rgba(22,119,255,0.9), rgba(114,46,209,0.9))',
+        }}
+      >
+        {isCountdown ? (
+          <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+            <span style={{ color: '#fff', fontSize: 12, fontWeight: 600 }}>限时抢购</span>
+            <div style={{ display: 'flex', gap: 4 }}>
+              {['02', '15', '38'].map((n, i) => (
+                <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+                  <span style={{
+                    background: 'rgba(0,0,0,0.3)',
+                    color: '#ffd700',
+                    fontSize: 16,
+                    fontWeight: 800,
+                    padding: '2px 6px',
+                    borderRadius: 3,
+                  }}>
+                    {n}
+                  </span>
+                  {i < 2 && <span style={{ color: '#ffd700', fontSize: 12 }}>:</span>}
+                </div>
+              ))}
+            </div>
+          </div>
+        ) : (
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+            <span style={{ color: '#ffd700', fontSize: 10, fontWeight: 700 }}>NEW</span>
+            <span style={{ color: '#fff', fontSize: 12, fontWeight: 600 }}>新品上市 全场5折起</span>
+            <span style={{
+              color: '#fff',
+              fontSize: 10,
+              border: '1px solid rgba(255,255,255,0.6)',
+              borderRadius: 10,
+              padding: '1px 8px',
+            }}>
+              立即抢购
+            </span>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+function TemplatePreview({ template }: { template: TemplateDefinition }) {
+  const { category, id } = template;
+  switch (category) {
+    case 'ticker':
+      return <TickerPreview templateId={id} />;
+    case 'product_card':
+      return <ProductCardPreview templateId={id} />;
+    case 'badge':
+      return <BadgePreview />;
+    case 'side_panel':
+      return <SideListPreview />;
+    case 'banner':
+    case 'countdown':
+      return <BannerPreview templateId={id} />;
+    default:
+      return (
+        <div className="h-40 bg-gradient-to-br from-indigo-100 to-purple-100 flex items-center justify-center">
+          <EyeOutlined className="text-4xl text-indigo-300" />
+        </div>
+      );
+  }
+}
+
 export default function TemplatesPage() {
   const { data: session } = useSession();
   const planType = ((session?.user as Record<string, unknown>)?.planType || 'free') as PlanType;
   const [templates, setTemplates] = useState<TemplateDefinition[]>([]);
   const [category, setCategory] = useState<string>('all');
+  const [detailTemplate, setDetailTemplate] = useState<TemplateDefinition | null>(null);
 
   useEffect(() => {
     fetch(`/api/templates${category !== 'all' ? `?category=${category}` : ''}`)
@@ -68,12 +414,17 @@ export default function TemplatesPage() {
               <Card
                 hoverable
                 className={allowed ? '' : 'opacity-60'}
-                cover={
-                  <div className="h-40 bg-gradient-to-br from-indigo-100 to-purple-100 flex items-center justify-center">
-                    <EyeOutlined className="text-4xl text-indigo-300" />
-                  </div>
-                }
+                styles={{ body: { padding: 12 } }}
+                cover={<TemplatePreview template={template} />}
                 actions={[
+                  <Button
+                    type="link"
+                    icon={<InfoCircleOutlined />}
+                    key="info"
+                    onClick={() => setDetailTemplate(template)}
+                  >
+                    详情
+                  </Button>,
                   allowed ? (
                     <Button type="link" icon={<CheckOutlined />} key="select">选择</Button>
                   ) : (
@@ -83,18 +434,59 @@ export default function TemplatesPage() {
               >
                 <Card.Meta
                   title={
-                    <Space>
-                      {template.name}
-                      <Tag color={PLAN_TAG_COLORS[template.minPlan]}>{template.minPlan.toUpperCase()}</Tag>
+                    <Space size={4}>
+                      <span className="text-sm">{TEMPLATE_DISPLAY_NAMES[template.id] || template.name}</span>
+                      <Tag color={PLAN_TAG_COLORS[template.minPlan]} className="text-xs">
+                        {template.minPlan.toUpperCase()}
+                      </Tag>
                     </Space>
                   }
-                  description={<Text type="secondary">{template.description}</Text>}
+                  description={
+                    <Text type="secondary" className="text-xs line-clamp-2">
+                      {template.description}
+                    </Text>
+                  }
                 />
               </Card>
             </Col>
           );
         })}
       </Row>
+
+      <Modal
+        title={detailTemplate ? (TEMPLATE_DISPLAY_NAMES[detailTemplate.id] || detailTemplate.name) : ''}
+        open={!!detailTemplate}
+        onCancel={() => setDetailTemplate(null)}
+        footer={null}
+        width={520}
+      >
+        {detailTemplate && (
+          <div>
+            <div className="mb-4 rounded-lg overflow-hidden">
+              <TemplatePreview template={detailTemplate} />
+            </div>
+            <Descriptions column={2} size="small">
+              <Descriptions.Item label="分类">
+                {CATEGORY_LABELS[detailTemplate.category] || detailTemplate.category}
+              </Descriptions.Item>
+              <Descriptions.Item label="最低计划">
+                <Tag color={PLAN_TAG_COLORS[detailTemplate.minPlan]}>
+                  {detailTemplate.minPlan.toUpperCase()}
+                </Tag>
+              </Descriptions.Item>
+              <Descriptions.Item label="推荐尺寸">
+                {detailTemplate.recommendedSize.width} × {detailTemplate.recommendedSize.height}
+              </Descriptions.Item>
+              <Descriptions.Item label="支持方向">
+                {detailTemplate.supportedOrientations.map(o => o === 'horizontal' ? '水平' : '垂直').join(' / ')}
+              </Descriptions.Item>
+              <Descriptions.Item label="说明" span={2}>
+                {detailTemplate.description}
+              </Descriptions.Item>
+            </Descriptions>
+          </div>
+        )}
+      </Modal>
     </div>
   );
 }
