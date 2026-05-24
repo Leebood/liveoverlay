@@ -4,11 +4,13 @@
   "private": true,
   "scripts": {
     "build": "bash ./scripts/build.sh",
+    "build:vercel": "next build",
     "dev": "bash ./scripts/dev.sh",
     "preinstall": "npx only-allow pnpm",
     "lint": "eslint",
     "lint:build": "eslint . --quiet",
     "start": "bash ./scripts/start.sh",
+    "start:vercel": "next start",
     "ts-check": "tsc -p tsconfig.json",
     "validate": "pnpm run --parallel '/^(ts-check|lint:build)$/'"
   },
