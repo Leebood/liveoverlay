@@ -9,10 +9,16 @@ import {
   GlobalOutlined,
 } from '@ant-design/icons';
 import Link from 'next/link';
+import { useSession } from 'next-auth/react';
 
 const { Title, Paragraph } = Typography;
 
 export default function LandingPage() {
+  const { data: session } = useSession();
+
+  const ctaHref = session ? '/' : '/register';
+  const ctaText = session ? '进入控制台' : '免费开始';
+
   return (
     <div className="min-h-screen">
       {/* Hero Section */}
@@ -25,9 +31,9 @@ export default function LandingPage() {
             让你的Facebook直播间看起来像淘宝直播间——OBS浏览器源一键嵌入，实时展示滚动商品条、主推商品卡、促销角标。
           </Paragraph>
           <Space size="large">
-            <Link href="/register">
+            <Link href={ctaHref}>
               <Button type="primary" size="large" className="!bg-white !text-indigo-600 !font-semibold h-12 px-8">
-                免费开始
+                {ctaText}
               </Button>
             </Link>
             <Link href="/pricing">
@@ -105,9 +111,9 @@ export default function LandingPage() {
       <section className="py-16 px-4 bg-indigo-600 text-white text-center">
         <Title level={2} className="!text-white !mb-4">准备好提升你的直播体验了吗？</Title>
         <Paragraph className="!text-white/80 mb-8">免费开始，无需信用卡</Paragraph>
-        <Link href="/register">
+        <Link href={ctaHref}>
           <Button type="primary" size="large" className="!bg-white !text-indigo-600 !font-semibold h-12 px-8">
-            立即开始
+            {session ? '进入控制台' : '立即开始'}
           </Button>
         </Link>
       </section>
