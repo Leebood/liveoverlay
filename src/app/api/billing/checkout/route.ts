@@ -69,7 +69,7 @@ export async function POST(request: Request) {
           .eq('id', user.id);
       }
 
-      const appUrl = process.env.COZE_PROJECT_DOMAIN_DEFAULT || 'http://localhost:5000';
+      const appUrl = process.env.NEXT_PUBLIC_APP_URL || process.env.COZE_PROJECT_DOMAIN_DEFAULT || 'http://localhost:5000';
 
       const checkout = await stripe.checkout.sessions.create({
         customer: customerId,

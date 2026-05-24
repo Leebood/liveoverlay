@@ -5,6 +5,9 @@ import CredentialsProvider from 'next-auth/providers/credentials';
 import { getSupabaseClient } from '@/storage/database/supabase-client';
 import { createHash } from 'crypto';
 
+const appUrl = process.env.NEXT_PUBLIC_APP_URL || process.env.NEXTAUTH_URL || 'https://ailiveonline.com';
+const cookieDomain = appUrl.includes('ailiveonline.com') ? '.ailiveonline.com' : undefined;
+
 export const authOptions: NextAuthOptions = {
   providers: [
     CredentialsProvider({
@@ -73,4 +76,37 @@ export const authOptions: NextAuthOptions = {
     signIn: '/login',
   },
   secret: process.env.NEXTAUTH_SECRET,
+  cookies: cookieDomain
+    ? {
+        sessionToken: {
+          name: '__Secure-next-auth.session-token',
+          options: {
+            httpOnly: true,
+            sameSite: 'lax',
+            path: '/',
+            domain: cookieDomain,
+            secure: true,
+          },
+        },
+        callbackUrl: {
+          name: '__Secure-next-auth.callback-url',
+          options: {
+            httpOnly: true,
+            sameSite: 'lax',
+            path: '/',
+            domain: cookieDomain,
+            secure: true,
+          },
+        },
+        csrfToken: {
+          name: '__Host-next-auth.csrf-token',
+          options: {
+            httpOnly: true,
+            sameSite: 'lax',
+            path: '/',
+            secure: true,
+          },
+        },
+      }
+    : undefined,
 };

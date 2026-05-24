@@ -39,7 +39,7 @@ export async function POST() {
       return NextResponse.json({ error: 'Stripe not configured' }, { status: 500 });
     }
 
-    const appUrl = process.env.COZE_PROJECT_DOMAIN_DEFAULT || 'http://localhost:5000';
+    const appUrl = process.env.NEXT_PUBLIC_APP_URL || process.env.COZE_PROJECT_DOMAIN_DEFAULT || 'http://localhost:5000';
 
     const portalSession = await stripe.billingPortal.sessions.create({
       customer: user.stripe_customer_id as string,
