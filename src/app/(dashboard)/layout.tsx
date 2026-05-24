@@ -24,7 +24,7 @@ import type { PlanType } from '@/types/plan';
 const { Sider, Header, Content } = Layout;
 
 const menuItems = [
-  { key: '/', icon: <DashboardOutlined />, label: '控制台' },
+  { key: '/dashboard', icon: <DashboardOutlined />, label: '控制台' },
   { key: '/products', icon: <ShoppingOutlined />, label: '商品管理' },
   { key: '/templates', icon: <AppstoreOutlined />, label: '模板选择' },
   { key: '/overlay', icon: <DesktopOutlined />, label: 'Overlay配置' },
