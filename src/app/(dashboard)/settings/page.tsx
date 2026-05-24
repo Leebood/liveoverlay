@@ -47,7 +47,7 @@ export default function SettingsPage() {
             ]} />
           </Form.Item>
           <Form.Item name="brandPrimaryColor" label="品牌主色">
-            <Input type="color" className="h-10" />
+            <ColorPicker />
           </Form.Item>
           <Form.Item>
             <Button type="primary" htmlType="submit" icon={<SaveOutlined />}>

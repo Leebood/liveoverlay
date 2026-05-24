@@ -2,7 +2,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { Card, Button, Typography, Space, Empty, Tag, Modal, Form, Select, InputNumber, message } from 'antd';
+import { Card, Button, Typography, Space, Empty, Tag, Modal, Form, Select, Input, InputNumber, message } from 'antd';
 import { PlusOutlined, CopyOutlined, EyeOutlined, SettingOutlined } from '@ant-design/icons';
 import { useSession } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
@@ -157,7 +157,7 @@ export default function OverlayPage() {
       >
         <Form form={form} layout="vertical" onFinish={handleCreate}>
           <Form.Item name="name" label="名称" rules={[{ required: true }]}>
-            <input className="w-full p-2 border rounded" placeholder="如：主商品滚动条" />
+            <Input placeholder="如：主商品滚动条" />
           </Form.Item>
           <Form.Item name="templateId" label="模板" rules={[{ required: true }]}>
             <Select placeholder="选择模板">

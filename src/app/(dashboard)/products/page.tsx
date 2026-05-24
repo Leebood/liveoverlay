@@ -146,10 +146,10 @@ export default function ProductsPage() {
             form.setFieldsValue({
               name: record.name,
               price: parseFloat(record.price),
-              originalPrice: record.original_price ? parseFloat(record.original_price) : undefined,
-              description: record.description,
-              tag: record.tag,
-              buyUrl: record.buy_url,
+              originalPrice: record.original_price ? parseFloat(record.original_price) : 0,
+              description: record.description || '',
+              tag: record.tag || '',
+              buyUrl: record.buy_url || '',
             });
             setModalOpen(true);
           }} />
