@@ -2,8 +2,8 @@
 
 import type { PlanType } from './plan';
 
-export type TemplateCategory = 'ticker' | 'product_card' | 'badge' | 'side_panel' | 'banner' | 'countdown';
-export type OverlayComponent = 'scrolling_ticker' | 'product_card' | 'corner_badge' | 'side_panel' | 'top_banner' | 'countdown';
+export type TemplateCategory = 'ticker' | 'product_card' | 'badge' | 'side_panel' | 'banner' | 'countdown' | 'notification';
+export type OverlayComponent = 'scrolling_ticker' | 'product_card' | 'corner_badge' | 'side_panel' | 'top_banner' | 'countdown' | 'notification_popup';
 
 export interface TemplateConfigField {
   key: string;

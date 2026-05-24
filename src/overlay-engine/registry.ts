@@ -12,18 +12,30 @@ import { sideListTemplate } from './templates/side-list/config';
 import { topPromoTemplate } from './templates/top-promo/config';
 import { countdownBannerTemplate } from './templates/countdown-banner/config';
 import { promoCountdownTemplate } from './templates/promo-countdown/config';
+import { floatingPriceTagTemplate } from './templates/floating-price-tag/config';
+import { flashSalePopupTemplate } from './templates/flash-sale-popup/config';
+import { dualProductCompareTemplate } from './templates/dual-product-compare/config';
+import { bottomInfoBarTemplate } from './templates/bottom-info-bar/config';
+import { interactionCardTemplate } from './templates/interaction-card/config';
+import { neonTickerTemplate } from './templates/neon-ticker/config';
 
 export const TEMPLATE_REGISTRY: Record<string, TemplateDefinition> = {
   'basic-ticker': basicTickerTemplate,
   'modern-ticker': modernTickerTemplate,
   'minimal-ticker': minimalTickerTemplate,
+  'neon-ticker': neonTickerTemplate,
   'minimal-card': minimalCardTemplate,
   'spotlight-card': spotlightCardTemplate,
+  'dual-product-compare': dualProductCompareTemplate,
+  'interaction-card': interactionCardTemplate,
   'simple-badge': simpleBadgeTemplate,
+  'floating-price-tag': floatingPriceTagTemplate,
   'side-list': sideListTemplate,
   'top-promo': topPromoTemplate,
+  'bottom-info-bar': bottomInfoBarTemplate,
   'countdown-banner': countdownBannerTemplate,
   'promo-countdown': promoCountdownTemplate,
+  'flash-sale-popup': flashSalePopupTemplate,
 };
 
 export function getTemplateDefinition(templateId: string): TemplateDefinition | undefined {
