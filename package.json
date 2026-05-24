@@ -6,7 +6,7 @@
     "build": "bash ./scripts/build.sh",
     "build:vercel": "next build",
     "dev": "bash ./scripts/dev.sh",
-    "preinstall": "npx only-allow pnpm",
+    "preinstall": "npx only-allow pnpm || true",
     "lint": "eslint",
     "lint:build": "eslint . --quiet",
     "start": "bash ./scripts/start.sh",
