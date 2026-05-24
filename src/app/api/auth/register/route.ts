@@ -72,7 +72,8 @@ export async function POST(request: Request) {
 
     return NextResponse.json({ success: true, userId });
   } catch (err) {
-    const message = err instanceof Error ? err.message : 'Unknown error';
-    return NextResponse.json({ error: message }, { status: 500 });
+    const errorMessage = err instanceof Error ? err.message : 'Unknown error';
+    const stack = err instanceof Error ? err.stack : undefined;
+    return NextResponse.json({ error: errorMessage, stack: stack?.split('\n').slice(0, 5) }, { status: 500 });
   }
 }
