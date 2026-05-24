@@ -1,5 +1,5 @@
 {
   "framework": "nextjs",
-  "installCommand": "corepack enable pnpm && pnpm install --no-frozen-lockfile",
-  "buildCommand": "pnpm run build:vercel"
+  "installCommand": "npx pnpm install --no-frozen-lockfile",
+  "buildCommand": "npx pnpm run build:vercel"
 }
