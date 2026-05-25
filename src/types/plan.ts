@@ -14,6 +14,8 @@ export interface PlanLimits {
   displayName: string;
   price: number;
   yearlyPrice: number;
+  priceCNY: number;
+  yearlyPriceCNY: number;
   stripePriceId: string;
   stripeYearlyPriceId: string;
 

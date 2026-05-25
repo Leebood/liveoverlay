@@ -16,9 +16,10 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    const { planType, billingPeriod } = (await request.json()) as {
+    const { planType, billingPeriod, paymentMethod } = (await request.json()) as {
       planType: string;
       billingPeriod: string;
+      paymentMethod?: string;
     };
 
     if (!planType || !billingPeriod) {
@@ -71,10 +72,21 @@ export async function POST(request: Request) {
 
       const appUrl = process.env.NEXT_PUBLIC_APP_URL || process.env.COZE_PROJECT_DOMAIN_DEFAULT || 'http://localhost:5000';
 
+      // Determine payment method types based on user selection
+      // Stripe supports: card, wechat_pay, alipay
+      let paymentMethodTypes: Array<'card' | 'wechat_pay' | 'alipay'> = ['card', 'wechat_pay', 'alipay'];
+      if (paymentMethod === 'wechat_pay') {
+        paymentMethodTypes = ['wechat_pay'];
+      } else if (paymentMethod === 'alipay') {
+        paymentMethodTypes = ['alipay'];
+      } else if (paymentMethod === 'card') {
+        paymentMethodTypes = ['card'];
+      }
+
       const checkout = await stripe.checkout.sessions.create({
         customer: customerId,
         mode: 'subscription',
-        payment_method_types: ['card'],
+        payment_method_types: paymentMethodTypes,
         line_items: [{ price: priceId, quantity: 1 }],
         success_url: `${appUrl}/billing?success=true`,
         cancel_url: `${appUrl}/billing?canceled=true`,

@@ -2,8 +2,8 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { Card, Row, Col, Button, Typography, Tag, Space, Divider, Alert, Radio, message } from 'antd';
-import { CheckOutlined, CrownOutlined, ExperimentOutlined } from '@ant-design/icons';
+import { Card, Row, Col, Button, Typography, Tag, Space, Divider, Alert, Radio, message, Tooltip } from 'antd';
+import { CheckOutlined, CrownOutlined, ExperimentOutlined, WechatOutlined, AlipayCircleOutlined, CreditCardOutlined } from '@ant-design/icons';
 import { useSession } from 'next-auth/react';
 import { getPlanLimits } from '@/lib/plan-limits';
 import PlanBadge from '@/components/common/PlanBadge';
@@ -13,17 +13,20 @@ const { Title, Paragraph, Text } = Typography;
 
 const PLAN_ORDER: PlanType[] = ['free', 'starter', 'pro', 'business'];
 
+type PaymentMethod = 'card' | 'wechat_pay' | 'alipay';
+
 export default function BillingPage() {
   const { data: session, update: updateSession } = useSession();
   const planType = ((session?.user as Record<string, unknown>)?.planType || 'free') as PlanType;
   const [billingPeriod, setBillingPeriod] = useState<'monthly' | 'yearly'>('monthly');
   const [checkoutLoading, setCheckoutLoading] = useState<string | null>(null);
   const [isDemo, setIsDemo] = useState(false);
+  const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>('wechat_pay');
+  const [currency, setCurrency] = useState<'CNY' | 'USD'>('CNY');
 
   useEffect(() => {
     // Check if running in demo mode (no Stripe configured)
     fetch('/api/billing/checkout', { method: 'OPTIONS' }).catch(() => {});
-    // Simpler: just try checkout and see if demo is returned
   }, []);
 
   const handleUpgrade = async (targetPlan: PlanType) => {
@@ -32,7 +35,7 @@ export default function BillingPage() {
       const res = await fetch('/api/billing/checkout', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ planType: targetPlan, billingPeriod }),
+        body: JSON.stringify({ planType: targetPlan, billingPeriod, paymentMethod }),
       });
       const data = await res.json();
       if (data.demo) {
@@ -67,6 +70,20 @@ export default function BillingPage() {
     }
   };
 
+  const getPrice = (plan: PlanType) => {
+    const limits = getPlanLimits(plan);
+    if (currency === 'CNY') {
+      return billingPeriod === 'yearly'
+        ? Math.round(limits.yearlyPriceCNY / 12)
+        : limits.priceCNY;
+    }
+    return billingPeriod === 'yearly'
+      ? Math.round(limits.yearlyPrice / 12)
+      : limits.price;
+  };
+
+  const currencySymbol = currency === 'CNY' ? '¥' : '$';
+
   return (
     <div>
       <div className="flex justify-between items-center mb-4">
@@ -76,8 +93,18 @@ export default function BillingPage() {
             当前计划：<PlanBadge planType={planType} showPrice />
           </Paragraph>
         </div>
-        <Space>
-          <Radio.Group value={billingPeriod} onChange={e => setBillingPeriod(e.target.value)} optionType="button">
+        <Space wrap>
+          <Radio.Group
+            value={currency}
+            onChange={e => setCurrency(e.target.value)}
+            optionType="button"
+            buttonStyle="solid"
+            size="small"
+          >
+            <Radio.Button value="CNY">¥ 人民币</Radio.Button>
+            <Radio.Button value="USD">$ 美元</Radio.Button>
+          </Radio.Group>
+          <Radio.Group value={billingPeriod} onChange={e => setBillingPeriod(e.target.value)} optionType="button" size="small">
             <Radio.Button value="monthly">月付</Radio.Button>
             <Radio.Button value="yearly">年付（省20%）</Radio.Button>
           </Radio.Group>
@@ -96,13 +123,50 @@ export default function BillingPage() {
         className="mb-6"
       />
 
+      {/* Payment Method Selection */}
+      <Card className="mb-6" size="small">
+        <div className="flex items-center gap-4 flex-wrap">
+          <Text strong>选择支付方式：</Text>
+          <Radio.Group
+            value={paymentMethod}
+            onChange={e => setPaymentMethod(e.target.value)}
+            optionType="button"
+            buttonStyle="solid"
+          >
+            <Radio.Button value="wechat_pay">
+              <WechatOutlined style={{ color: '#07C160', fontSize: 18, marginRight: 6, verticalAlign: 'middle' }} />
+              微信支付
+            </Radio.Button>
+            <Radio.Button value="alipay">
+              <AlipayCircleOutlined style={{ color: '#1677FF', fontSize: 18, marginRight: 6, verticalAlign: 'middle' }} />
+              支付宝
+            </Radio.Button>
+            <Radio.Button value="card">
+              <CreditCardOutlined style={{ fontSize: 16, marginRight: 6, verticalAlign: 'middle' }} />
+              银行卡
+            </Radio.Button>
+          </Radio.Group>
+
+          <div className="flex gap-3 ml-auto">
+            <Tooltip title="微信扫码支付，即时到账">
+              <Tag color="green" className="cursor-pointer">
+                <WechatOutlined /> 微信支付支持扫码和APP支付
+              </Tag>
+            </Tooltip>
+            <Tooltip title="支付宝扫码或账号支付">
+              <Tag color="blue" className="cursor-pointer">
+                <AlipayCircleOutlined /> 支付宝支持扫码和账号支付
+              </Tag>
+            </Tooltip>
+          </div>
+        </div>
+      </Card>
+
       <Row gutter={[16, 16]}>
         {PLAN_ORDER.map(plan => {
           const limits = getPlanLimits(plan);
           const isCurrent = plan === planType;
-          const price = billingPeriod === 'yearly'
-            ? Math.round(limits.yearlyPrice / 12)
-            : limits.price;
+          const price = getPrice(plan);
 
           return (
             <Col xs={24} sm={12} md={6} key={plan}>
@@ -110,7 +174,7 @@ export default function BillingPage() {
                 <div className="text-center mb-4">
                   <PlanBadge planType={plan} />
                   <Title level={2} className="!mt-2 !mb-0">
-                    {limits.price === 0 ? '免费' : `$${price}`}
+                    {limits.price === 0 ? '免费' : `${currencySymbol}${price}`}
                   </Title>
                   {limits.price > 0 && (
                     <Text type="secondary">/月 {billingPeriod === 'yearly' ? '(年付)' : ''}</Text>
@@ -149,6 +213,19 @@ export default function BillingPage() {
           );
         })}
       </Row>
+
+      {/* Payment Security Notice */}
+      <div className="mt-8 text-center text-gray-400 text-sm space-y-1">
+        <div>
+          <WechatOutlined style={{ color: '#07C160' }} /> 微信支付
+          <span className="mx-2">|</span>
+          <AlipayCircleOutlined style={{ color: '#1677FF' }} /> 支付宝
+          <span className="mx-2">|</span>
+          <CreditCardOutlined /> 银行卡支付
+        </div>
+        <div>支付由 Stripe 安全处理，支持 HTTPS 加密传输</div>
+        <div>年付计划可节省 20% 费用，随时可取消订阅</div>
+      </div>
     </div>
   );
 }
