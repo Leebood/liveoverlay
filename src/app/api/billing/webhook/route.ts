@@ -1,82 +1,66 @@
 // src/app/api/billing/webhook/route.ts
+// 虎皮椒异步回调通知
 
 import { NextResponse } from 'next/server';
 import { getSupabaseClient } from '@/storage/database/supabase-client';
-import { isStripeConfigured, getStripeClient } from '@/lib/stripe';
+import { isXunhuPayConfigured, verifyCallback } from '@/lib/xunhupay';
 
 // POST /api/billing/webhook
 export async function POST(request: Request) {
   try {
-    // Demo mode: no Stripe configured
-    if (!isStripeConfigured()) {
-      return NextResponse.json({ received: true, demo: true });
+    if (!isXunhuPayConfigured()) {
+      return NextResponse.json({ errcode: 0, errmsg: 'demo mode' });
     }
 
-    const body = await request.text();
-    const sig = request.headers.get('stripe-signature');
+    const formData = await request.formData();
+    const params: Record<string, string> = {};
+    formData.forEach((value, key) => {
+      params[key] = value.toString();
+    });
 
-    if (!sig) {
-      return NextResponse.json({ error: 'Missing signature' }, { status: 400 });
+    // 验证签名
+    if (!verifyCallback(params)) {
+      return NextResponse.json({ errcode: 1, errmsg: '签名验证失败' }, { status: 400 });
     }
 
-    const stripe = getStripeClient();
-    if (!stripe) {
-      return NextResponse.json({ error: 'Stripe not configured' }, { status: 500 });
-    }
+    // 支付状态: OD（订单已支付）
+    const status = params.status || params.trade_status;
+    const tradeOrderId = params.trade_order_id || params.out_trade_no;
 
-    const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET || '';
-    let event: import('stripe').Stripe.Event;
+    if (status === 'OD' && tradeOrderId) {
+      const supabase = getSupabaseClient();
 
-    try {
-      event = stripe.webhooks.constructEvent(body, sig, webhookSecret);
-    } catch {
-      return NextResponse.json({ error: 'Invalid signature' }, { status: 400 });
-    }
+      // 查找订单
+      const { data: subscription } = await supabase
+        .from('subscriptions')
+        .select('id, user_id, plan_type')
+        .eq('stripe_subscription_id', tradeOrderId)
+        .maybeSingle();
 
-    const supabase = getSupabaseClient();
+      if (subscription) {
+        // 更新订单状态为已支付
+        await supabase
+          .from('subscriptions')
+          .update({ status: 'active' })
+          .eq('id', subscription.id);
 
-    switch (event.type) {
-      case 'checkout.session.completed': {
-        const cs = event.data.object as import('stripe').Stripe.Checkout.Session;
-        if (cs.metadata?.userId && cs.metadata?.planType) {
+        // 更新用户计划
+        if (subscription.user_id && subscription.plan_type) {
           await supabase
             .from('users')
             .update({
-              plan_type: cs.metadata.planType,
+              plan_type: subscription.plan_type,
               subscription_status: 'active',
-              stripe_subscription_id: cs.subscription as string,
             })
-            .eq('id', cs.metadata.userId);
+            .eq('id', subscription.user_id);
         }
-        break;
-      }
-      case 'customer.subscription.deleted': {
-        const sub = event.data.object as import('stripe').Stripe.Subscription;
-        await supabase
-          .from('users')
-          .update({
-            plan_type: 'free',
-            subscription_status: 'canceled',
-          })
-          .eq('stripe_customer_id', sub.customer as string);
-        break;
-      }
-      case 'customer.subscription.updated': {
-        const sub = event.data.object as import('stripe').Stripe.Subscription;
-        const status = sub.status === 'active' ? 'active' : 'inactive';
-        await supabase
-          .from('users')
-          .update({
-            subscription_status: status,
-          })
-          .eq('stripe_customer_id', sub.customer as string);
-        break;
       }
     }
 
-    return NextResponse.json({ received: true });
+    // 返回成功响应（虎皮椒要求返回 errcode=0）
+    return NextResponse.json({ errcode: 0, errmsg: 'success' });
   } catch (err) {
     const message = err instanceof Error ? err.message : 'Unknown error';
-    return NextResponse.json({ error: message }, { status: 500 });
+    return NextResponse.json({ errcode: 1, errmsg: message }, { status: 500 });
   }
 }

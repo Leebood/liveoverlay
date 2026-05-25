@@ -3,7 +3,7 @@
 
 import { useState } from 'react';
 import { Row, Col, Card, Button, Typography, Tag, Divider, Radio, Tooltip, Space } from 'antd';
-import { CheckOutlined, CrownOutlined, WechatOutlined, AlipayCircleOutlined, CreditCardOutlined } from '@ant-design/icons';
+import { CheckOutlined, CrownOutlined, WechatOutlined, AlipayCircleOutlined } from '@ant-design/icons';
 import Link from 'next/link';
 import { getPlanLimits } from '@/lib/plan-limits';
 import type { PlanType } from '@/types/plan';
@@ -13,45 +13,27 @@ const { Title, Paragraph, Text } = Typography;
 const PLAN_ORDER: PlanType[] = ['free', 'starter', 'pro', 'business'];
 
 export default function PricingPage() {
-  const [currency, setCurrency] = useState<'CNY' | 'USD'>('CNY');
-
   const getPrice = (plan: PlanType) => {
     const limits = getPlanLimits(plan);
-    if (currency === 'CNY') return limits.priceCNY;
-    return limits.price;
+    return limits.priceCNY;
   };
 
   const getYearlyMonthly = (plan: PlanType) => {
     const limits = getPlanLimits(plan);
-    if (currency === 'CNY') return Math.round(limits.yearlyPriceCNY / 12);
-    return Math.round(limits.yearlyPrice / 12);
+    return Math.round(limits.yearlyPriceCNY / 12);
   };
-
-  const symbol = currency === 'CNY' ? '¥' : '$';
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-indigo-50 to-purple-50 py-16 px-4">
       <div className="text-center mb-8">
         <Title level={1}>选择你的计划</Title>
         <Paragraph className="text-lg text-gray-500">从免费开始，随时升级</Paragraph>
-
-        <Radio.Group
-          value={currency}
-          onChange={e => setCurrency(e.target.value)}
-          optionType="button"
-          buttonStyle="solid"
-          size="large"
-          className="mt-4"
-        >
-          <Radio.Button value="CNY">¥ 人民币</Radio.Button>
-          <Radio.Button value="USD">$ US Dollar</Radio.Button>
-        </Radio.Group>
       </div>
 
       {/* Payment Methods Banner */}
       <div className="text-center mb-8">
         <Space size="large">
-          <Tooltip title="微信扫码支付">
+          <Tooltip title="微信扫码支付，即时到账">
             <Tag color="green" className="text-base px-3 py-1 cursor-pointer">
               <WechatOutlined style={{ fontSize: 18 }} /> 微信支付
             </Tag>
@@ -59,11 +41,6 @@ export default function PricingPage() {
           <Tooltip title="支付宝扫码支付">
             <Tag color="blue" className="text-base px-3 py-1 cursor-pointer">
               <AlipayCircleOutlined style={{ fontSize: 18 }} /> 支付宝
-            </Tag>
-          </Tooltip>
-          <Tooltip title="Visa / Mastercard 信用卡">
-            <Tag className="text-base px-3 py-1 cursor-pointer">
-              <CreditCardOutlined style={{ fontSize: 18 }} /> 银行卡
             </Tag>
           </Tooltip>
         </Space>
@@ -85,13 +62,13 @@ export default function PricingPage() {
                   <Title level={4}>{limits.displayName}</Title>
                   <div>
                     <Title level={1} className="!mt-0 !mb-0 inline">
-                      {price === 0 ? `${symbol}0` : `${symbol}${price}`}
+                      {price === 0 ? '¥0' : `¥${price}`}
                     </Title>
                     {price > 0 && <Text type="secondary">/月</Text>}
                   </div>
                   {price > 0 && (
                     <Text type="secondary" className="text-xs">
-                      年付 {symbol}{yearlyMonthly}/月（省20%）
+                      年付 ¥{yearlyMonthly}/月（省20%）
                     </Text>
                   )}
                 </div>
@@ -123,9 +100,9 @@ export default function PricingPage() {
       {/* Bottom Payment Info */}
       <div className="text-center mt-12 text-gray-400 text-sm space-y-2">
         <div>
-          支持微信支付、支付宝、Visa/Mastercard 银行卡
+          支持微信支付、支付宝扫码支付
         </div>
-        <div>所有计划均支持 7 天无理由退款 | 支付由 Stripe 安全处理</div>
+        <div>所有计划均支持 7 天无理由退款 | 支付安全由虎皮椒保障</div>
       </div>
     </div>
   );

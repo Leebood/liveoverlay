@@ -1,5 +1,5 @@
-// src/app/api/billing/portal/route.ts
-// 国内支付模式下的订阅管理（无 Stripe Portal）
+// src/app/api/billing/cancel/route.ts
+// 取消订阅
 
 import { NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
@@ -7,7 +7,7 @@ import { authOptions } from '@/lib/auth';
 import { getSupabaseClient } from '@/storage/database/supabase-client';
 import { isXunhuPayConfigured } from '@/lib/xunhupay';
 
-// POST /api/billing/portal
+// POST /api/billing/cancel
 export async function POST() {
   try {
     const session = await getServerSession(authOptions);
@@ -18,7 +18,7 @@ export async function POST() {
     const supabase = getSupabaseClient();
     const { data: user } = await supabase
       .from('users')
-      .select('id, plan_type, subscription_status')
+      .select('id, plan_type')
       .eq('email', session.user.email)
       .maybeSingle();
 
@@ -26,18 +26,29 @@ export async function POST() {
       return NextResponse.json({ error: '用户不存在' }, { status: 404 });
     }
 
-    if (!isXunhuPayConfigured()) {
-      return NextResponse.json({
-        url: '/billing?demo=true',
-        demo: true,
-        message: '演示模式：可直接在页面上管理订阅',
-      });
+    if (user.plan_type === 'free') {
+      return NextResponse.json({ error: '当前为免费计划' }, { status: 400 });
     }
 
-    // 国内支付模式：直接跳转到账单页面管理
-    // 取消订阅等操作在账单页面处理
+    // 更新用户计划为免费
+    await supabase
+      .from('users')
+      .update({
+        plan_type: 'free',
+        subscription_status: 'canceled',
+      })
+      .eq('id', user.id);
+
+    // 更新订阅状态
+    await supabase
+      .from('subscriptions')
+      .update({ status: 'canceled' })
+      .eq('user_id', user.id)
+      .eq('status', 'active');
+
     return NextResponse.json({
-      url: '/billing',
+      success: true,
+      message: '订阅已取消，计划已降级为免费版',
     });
   } catch (err) {
     const message = err instanceof Error ? err.message : 'Unknown error';
