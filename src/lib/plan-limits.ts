@@ -136,7 +136,26 @@ const PLAN_LIMITS: Record<PlanType, PlanLimits> = {
 };
 
 export function getPlanLimits(planType: PlanType): PlanLimits {
-  return PLAN_LIMITS[planType];
+  const limits = { ...PLAN_LIMITS[planType] };
+  // Override Stripe Price IDs from environment variables (real payment)
+  const envPriceMap: Record<string, { monthly?: string; yearly?: string }> = {
+    starter: {
+      monthly: process.env.STRIPE_STARTER_MONTHLY_PRICE_ID,
+      yearly: process.env.STRIPE_STARTER_YEARLY_PRICE_ID,
+    },
+    pro: {
+      monthly: process.env.STRIPE_PRO_MONTHLY_PRICE_ID,
+      yearly: process.env.STRIPE_PRO_YEARLY_PRICE_ID,
+    },
+    business: {
+      monthly: process.env.STRIPE_BUSINESS_MONTHLY_PRICE_ID,
+      yearly: process.env.STRIPE_BUSINESS_YEARLY_PRICE_ID,
+    },
+  };
+  const envPrices = envPriceMap[planType];
+  if (envPrices?.monthly) limits.stripePriceId = envPrices.monthly;
+  if (envPrices?.yearly) limits.stripeYearlyPriceId = envPrices.yearly;
+  return limits;
 }
 
 export function isWithinLimit(planType: PlanType, feature: keyof PlanLimits, current: number): boolean {
