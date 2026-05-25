@@ -1,66 +1,146 @@
 // src/app/api/billing/webhook/route.ts
-// 虎皮椒异步回调通知
-
-import { NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
+import { verifyCallback as verifyWechatCallback, WECHAT_TRADE_STATE } from '@/lib/wechat-pay';
+import { verifyCallback as verifyAlipayCallback, ALIPAY_TRADE_STATUS } from '@/lib/alipay';
 import { getSupabaseClient } from '@/storage/database/supabase-client';
-import { isXunhuPayConfigured, verifyCallback } from '@/lib/xunhupay';
 
-// POST /api/billing/webhook
-export async function POST(request: Request) {
+/**
+ * 微信支付回调
+ * POST /api/billing/webhook/wechat
+ */
+export async function POST(request: NextRequest) {
   try {
-    if (!isXunhuPayConfigured()) {
-      return NextResponse.json({ errcode: 0, errmsg: 'demo mode' });
+    const contentType = request.headers.get('content-type') || '';
+    const url = new URL(request.url);
+    const pathParts = url.pathname.split('/');
+    const channel = pathParts[pathParts.length - 1]; // wechat 或 alipay
+
+    if (channel === 'wechat') {
+      return handleWechatCallback(request);
+    } else if (channel === 'alipay') {
+      return handleAlipayCallback(request);
     }
 
-    const formData = await request.formData();
-    const params: Record<string, string> = {};
-    formData.forEach((value, key) => {
-      params[key] = value.toString();
-    });
-
-    // 验证签名
-    if (!verifyCallback(params)) {
-      return NextResponse.json({ errcode: 1, errmsg: '签名验证失败' }, { status: 400 });
+    // 通用 webhook（兼容旧路径）
+    if (contentType.includes('json')) {
+      return handleWechatCallback(request);
+    } else {
+      return handleAlipayCallback(request);
     }
+  } catch (error: unknown) {
+    console.error('[Webhook] 处理回调失败:', error);
+    return NextResponse.json({ error: 'Webhook processing failed' }, { status: 500 });
+  }
+}
 
-    // 支付状态: OD（订单已支付）
-    const status = params.status || params.trade_status;
-    const tradeOrderId = params.trade_order_id || params.out_trade_no;
+/**
+ * GET /api/billing/webhook/alipay
+ * 支付宝使用 GET 方式发送 return_url 回调
+ */
+export async function GET(request: NextRequest) {
+  const url = new URL(request.url);
+  const params: Record<string, string> = {};
+  url.searchParams.forEach((value, key) => {
+    params[key] = value;
+  });
 
-    if (status === 'OD' && tradeOrderId) {
+  const outTradeNo = params.out_trade_no;
+  const tradeStatus = params.trade_status;
+
+  if (outTradeNo && (tradeStatus === 'TRADE_SUCCESS' || tradeStatus === 'TRADE_FINISHED')) {
       const supabase = getSupabaseClient();
+    await supabase
+      .from('subscriptions')
+      .update({
+        status: 'active',
+        paid_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+      })
+      .eq('trade_order_id', outTradeNo)
+      .eq('status', 'pending');
+  }
 
-      // 查找订单
-      const { data: subscription } = await supabase
-        .from('subscriptions')
-        .select('id, user_id, plan_type')
-        .eq('stripe_subscription_id', tradeOrderId)
-        .maybeSingle();
+  // 重定向到账单页面
+  const appUrl = process.env.NEXT_PUBLIC_APP_URL || '';
+  return NextResponse.redirect(`${appUrl}/billing?paid=true`);
+}
 
-      if (subscription) {
-        // 更新订单状态为已支付
+async function handleWechatCallback(request: NextRequest) {
+  const timestamp = request.headers.get('wechatpay-timestamp') || '';
+  const nonce = request.headers.get('wechatpay-nonce') || '';
+  const signature = request.headers.get('wechatpay-signature') || '';
+  const body = await request.text();
+
+  // 验证签名
+  const isValid = verifyWechatCallback(timestamp, nonce, body, signature);
+  if (!isValid) {
+    console.warn('[Webhook/Wechat] 签名验证失败');
+  }
+
+  try {
+    const data = JSON.parse(body);
+    const eventType = data.event_type;
+    const resource = data.resource;
+
+    if (eventType === 'TRANSACTION.SUCCESS') {
+      const outTradeNo = resource.out_trade_no;
+      const tradeState = resource.trade_state;
+
+      if (tradeState === 'SUCCESS' && outTradeNo) {
+          const supabase = getSupabaseClient();
         await supabase
           .from('subscriptions')
-          .update({ status: 'active' })
-          .eq('id', subscription.id);
+          .update({
+            status: 'active',
+            paid_at: new Date().toISOString(),
+            updated_at: new Date().toISOString(),
+          })
+          .eq('trade_order_id', outTradeNo)
+          .eq('status', 'pending');
 
-        // 更新用户计划
-        if (subscription.user_id && subscription.plan_type) {
-          await supabase
-            .from('users')
-            .update({
-              plan_type: subscription.plan_type,
-              subscription_status: 'active',
-            })
-            .eq('id', subscription.user_id);
-        }
+        console.log(`[Webhook/Wechat] 订单 ${outTradeNo} 支付成功`);
       }
     }
 
-    // 返回成功响应（虎皮椒要求返回 errcode=0）
-    return NextResponse.json({ errcode: 0, errmsg: 'success' });
-  } catch (err) {
-    const message = err instanceof Error ? err.message : 'Unknown error';
-    return NextResponse.json({ errcode: 1, errmsg: message }, { status: 500 });
+    // 微信要求返回 200 + 成功响应
+    return NextResponse.json({ code: 'SUCCESS', message: 'OK' });
+  } catch {
+    return NextResponse.json({ code: 'FAIL', message: 'Invalid data' }, { status: 400 });
   }
+}
+
+async function handleAlipayCallback(request: NextRequest) {
+  const formData = await request.formData();
+  const params: Record<string, string> = {};
+  formData.forEach((value, key) => {
+    params[key] = value.toString();
+  });
+
+  // 验证签名
+  const isValid = verifyAlipayCallback(params);
+  if (!isValid) {
+    console.warn('[Webhook/Alipay] 签名验证失败');
+    return new Response('fail', { status: 400 });
+  }
+
+  const outTradeNo = params.out_trade_no;
+  const tradeStatus = params.trade_status;
+
+  if ((tradeStatus === 'TRADE_SUCCESS' || tradeStatus === 'TRADE_FINISHED') && outTradeNo) {
+      const supabase = getSupabaseClient();
+    await supabase
+      .from('subscriptions')
+      .update({
+        status: 'active',
+        paid_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+      })
+      .eq('trade_order_id', outTradeNo)
+      .eq('status', 'pending');
+
+    console.log(`[Webhook/Alipay] 订单 ${outTradeNo} 支付成功`);
+  }
+
+  // 支付宝要求返回 success 字符串
+  return new Response('success');
 }

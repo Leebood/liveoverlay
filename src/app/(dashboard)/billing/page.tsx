@@ -314,7 +314,7 @@ export default function BillingPage() {
           <span className="mx-2">|</span>
           <AlipayCircleOutlined style={{ color: '#1677FF' }} /> 支付宝
         </div>
-        <div>支付安全由虎皮椒提供保障，支持 HTTPS 加密传输</div>
+        <div>支付安全由微信支付/支付宝官方提供保障，支持 HTTPS 加密传输</div>
         <div>年付计划可节省 20% 费用，随时可取消订阅</div>
       </div>
     </div>

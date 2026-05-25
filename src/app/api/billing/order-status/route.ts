@@ -1,58 +1,91 @@
 // src/app/api/billing/order-status/route.ts
-// 查询订单支付状态（前端轮询）
-
-import { NextResponse } from 'next/server';
-import { getServerSession } from 'next-auth';
-import { authOptions } from '@/lib/auth';
+import { NextRequest, NextResponse } from 'next/server';
+import { queryOrder as queryWechatOrder, isWechatPayEnabled, WECHAT_TRADE_STATE } from '@/lib/wechat-pay';
+import { queryOrder as queryAlipayOrder, isAlipayEnabled, ALIPAY_TRADE_STATUS } from '@/lib/alipay';
 import { getSupabaseClient } from '@/storage/database/supabase-client';
 
-// GET /api/billing/order-status?tradeOrderId=xxx
-export async function GET(request: Request) {
+export async function GET(request: NextRequest) {
   try {
-    const session = await getServerSession(authOptions);
-    if (!session?.user?.email) {
-      return NextResponse.json({ error: '请先登录' }, { status: 401 });
-    }
-
-    const { searchParams } = new URL(request.url);
-    const tradeOrderId = searchParams.get('tradeOrderId');
-
+    const tradeOrderId = request.nextUrl.searchParams.get('tradeOrderId');
     if (!tradeOrderId) {
       return NextResponse.json({ error: '缺少订单号' }, { status: 400 });
     }
 
+    // 先查数据库中的订阅状态
     const supabase = getSupabaseClient();
-
-    // 查询订单
-    const { data: subscription } = await supabase
+    const { data: sub } = await supabase
       .from('subscriptions')
-      .select('id, status, plan_type')
-      .eq('stripe_subscription_id', tradeOrderId)
-      .maybeSingle();
+      .select('status, payment_method')
+      .eq('trade_order_id', tradeOrderId)
+      .single();
 
-    if (!subscription) {
-      return NextResponse.json({ status: 'not_found' }, { status: 404 });
+    if (sub?.status === 'active') {
+      return NextResponse.json({ status: 'paid' });
     }
 
-    // 如果已支付，同时查询用户当前计划
-    if (subscription.status === 'active') {
-      const { data: user } = await supabase
-        .from('users')
-        .select('plan_type')
-        .eq('email', session.user.email)
-        .maybeSingle();
+    // 如果微信/支付宝都未配置，检查数据库状态
+    const wechatEnabled = isWechatPayEnabled();
+    const alipayEnabled = isAlipayEnabled();
 
+    if (!wechatEnabled && !alipayEnabled) {
+      // 演示模式，检查数据库
       return NextResponse.json({
-        status: 'paid',
-        planType: user?.plan_type || subscription.plan_type,
+        status: sub?.status === 'active' ? 'paid' : 'pending',
       });
     }
 
+    // 根据支付方式查询
+    const paymentMethod = sub?.payment_method;
+
+    if (paymentMethod === 'wechat' && wechatEnabled) {
+      const result = await queryWechatOrder(tradeOrderId);
+      if (result?.trade_state === 'SUCCESS') {
+        // 更新数据库
+        await supabase
+          .from('subscriptions')
+          .update({
+            status: 'active',
+            paid_at: new Date().toISOString(),
+            updated_at: new Date().toISOString(),
+          })
+          .eq('trade_order_id', tradeOrderId)
+          .eq('status', 'pending');
+
+        return NextResponse.json({ status: 'paid' });
+      }
+      return NextResponse.json({
+        status: 'pending',
+        detail: WECHAT_TRADE_STATE[result?.trade_state || 'NOTPAY'] || '等待支付',
+      });
+    }
+
+    if (paymentMethod === 'alipay' && alipayEnabled) {
+      const result = await queryAlipayOrder(tradeOrderId);
+      if (result?.tradeStatus === 'TRADE_SUCCESS' || result?.tradeStatus === 'TRADE_FINISHED') {
+        await supabase
+          .from('subscriptions')
+          .update({
+            status: 'active',
+            paid_at: new Date().toISOString(),
+            updated_at: new Date().toISOString(),
+          })
+          .eq('trade_order_id', tradeOrderId)
+          .eq('status', 'pending');
+
+        return NextResponse.json({ status: 'paid' });
+      }
+      return NextResponse.json({
+        status: 'pending',
+        detail: ALIPAY_TRADE_STATUS[result?.tradeStatus || 'WAIT_BUYER_PAY'] || '等待支付',
+      });
+    }
+
+    // 回退：检查数据库
     return NextResponse.json({
-      status: subscription.status, // pending / active / canceled
+      status: sub?.status === 'active' ? 'paid' : 'pending',
     });
-  } catch (err) {
-    const message = err instanceof Error ? err.message : 'Unknown error';
-    return NextResponse.json({ error: message }, { status: 500 });
+  } catch (error: unknown) {
+    console.error('[OrderStatus] 查询失败:', error);
+    return NextResponse.json({ error: '查询订单状态失败' }, { status: 500 });
   }
 }

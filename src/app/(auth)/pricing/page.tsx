@@ -102,7 +102,7 @@ export default function PricingPage() {
         <div>
           支持微信支付、支付宝扫码支付
         </div>
-        <div>所有计划均支持 7 天无理由退款 | 支付安全由虎皮椒保障</div>
+        <div>所有计划均支持 7 天无理由退款 | 支付安全由微信支付/支付宝官方保障</div>
       </div>
     </div>
   );

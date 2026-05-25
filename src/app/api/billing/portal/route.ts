@@ -1,32 +1,17 @@
 // src/app/api/billing/portal/route.ts
-// 国内支付模式下的订阅管理（无 Stripe Portal）
+// 国内支付模式下的订阅管理
 
 import { NextResponse } from 'next/server';
-import { getServerSession } from 'next-auth';
-import { authOptions } from '@/lib/auth';
-import { getSupabaseClient } from '@/storage/database/supabase-client';
-import { isXunhuPayConfigured } from '@/lib/xunhupay';
+import { isWechatPayEnabled } from '@/lib/wechat-pay';
+import { isAlipayEnabled } from '@/lib/alipay';
 
 // POST /api/billing/portal
 export async function POST() {
   try {
-    const session = await getServerSession(authOptions);
-    if (!session?.user?.email) {
-      return NextResponse.json({ error: '请先登录' }, { status: 401 });
-    }
+    const wechatEnabled = isWechatPayEnabled();
+    const alipayEnabled = isAlipayEnabled();
 
-    const supabase = getSupabaseClient();
-    const { data: user } = await supabase
-      .from('users')
-      .select('id, plan_type, subscription_status')
-      .eq('email', session.user.email)
-      .maybeSingle();
-
-    if (!user) {
-      return NextResponse.json({ error: '用户不存在' }, { status: 404 });
-    }
-
-    if (!isXunhuPayConfigured()) {
+    if (!wechatEnabled && !alipayEnabled) {
       return NextResponse.json({
         url: '/billing?demo=true',
         demo: true,
@@ -35,7 +20,6 @@ export async function POST() {
     }
 
     // 国内支付模式：直接跳转到账单页面管理
-    // 取消订阅等操作在账单页面处理
     return NextResponse.json({
       url: '/billing',
     });

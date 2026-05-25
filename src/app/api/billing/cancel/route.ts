@@ -5,7 +5,6 @@ import { NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { getSupabaseClient } from '@/storage/database/supabase-client';
-import { isXunhuPayConfigured } from '@/lib/xunhupay';
 
 // POST /api/billing/cancel
 export async function POST() {
