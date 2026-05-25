@@ -15,6 +15,7 @@ function renderBasicTicker(products, config) {
     var item = document.createElement('span');
     item.className = 'ticker-item';
     item.setAttribute('data-product-id', p.id);
+    if (p.buyUrl || p.buy_url) item.setAttribute('data-buy-url', p.buyUrl || p.buy_url);
     item.style.cssText = 'display:inline-flex;align-items:center;padding:0 24px;color:' + config.textColor + ';font-size:16px;font-weight:500;';
 
     var imgHtml = config.showProductImage && p.imageUrl ? '<img src="' + p.imageUrl + '" style="width:36px;height:36px;border-radius:4px;margin-right:8px;object-fit:cover;" />' : '';

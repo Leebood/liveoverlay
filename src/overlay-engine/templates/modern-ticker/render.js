@@ -14,6 +14,7 @@ function renderModernTicker(products, config) {
     var card = document.createElement('div');
     card.className = 'ticker-card';
     card.setAttribute('data-product-id', p.id);
+    if (p.buyUrl || p.buy_url) card.setAttribute('data-buy-url', p.buyUrl || p.buy_url);
     card.style.cssText = 'flex-shrink:0;width:' + config.cardWidth + 'px;background:' + config.cardBackgroundColor + ';border-radius:' + config.borderRadius + 'px;padding:12px;display:flex;align-items:center;gap:10px;box-shadow:0 2px 8px rgba(0,0,0,0.2);transition:transform 0.3s,opacity 0.3s;';
 
     var imgHtml = config.showProductImage && p.imageUrl

@@ -131,6 +131,17 @@ export default function ProductsPage() {
       render: (tag: string | null) => tag ? <Tag color="blue">{tag}</Tag> : '-',
     },
     {
+      title: '购买链接',
+      dataIndex: 'buy_url',
+      key: 'buy_url',
+      width: 120,
+      render: (url: string | null) => url ? (
+        <a href={url} target="_blank" rel="noopener noreferrer" className="text-blue-500 hover:text-blue-600 truncate block max-w-[120px]" title={url}>
+          {url.replace(/^https?:\/\/(www\.)?/, '').split('/')[0]}
+        </a>
+      ) : <span className="text-gray-300">未设置</span>,
+    },
+    {
       title: '状态',
       dataIndex: 'is_active',
       key: 'is_active',
@@ -150,6 +161,7 @@ export default function ProductsPage() {
               description: record.description || '',
               tag: record.tag || '',
               buyUrl: record.buy_url || '',
+              category: record.category || '',
             });
             setModalOpen(true);
           }} />
@@ -222,8 +234,11 @@ export default function ProductsPage() {
           <Form.Item name="tag" label="标签">
             <Input placeholder="如: 新品, 热卖, 限时" />
           </Form.Item>
-          <Form.Item name="buyUrl" label="购买链接">
-            <Input placeholder="https://..." />
+          <Form.Item name="buyUrl" label="购买链接" tooltip="填写商品在独立站的链接，Overlay 中点击可跳转购买" rules={[{ type: 'url', message: '请输入有效的 URL 地址' }]}>
+            <Input placeholder="https://your-store.com/product/xxx" addonAfter={<a href={form.getFieldValue('buyUrl') || '#'} target="_blank" rel="noopener noreferrer" onClick={(e) => { if (!form.getFieldValue('buyUrl')) e.preventDefault(); }} style={{ color: form.getFieldValue('buyUrl') ? '#1677ff' : '#999' }}>测试</a>} />
+          </Form.Item>
+          <Form.Item name="category" label="分类">
+            <Input placeholder="如: 电子产品, 美妆, 服饰" />
           </Form.Item>
           <Form.Item name="images" label="商品图片" valuePropName="fileList" getValueFromEvent={(e) => {
             if (Array.isArray(e)) return e;

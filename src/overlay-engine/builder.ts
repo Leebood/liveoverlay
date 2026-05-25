@@ -108,6 +108,30 @@ export function buildOverlayHtml(params: OverlayBuildParams): string {
     // Initialize rendering
     ${renderFn}(PRODUCTS, CONFIG);
 
+    // Make product elements clickable - open buy URL on click
+    (function() {
+      function handleClick(e) {
+        var el = e.target.closest ? e.target.closest('[data-product-id]') : null;
+        if (!el) return;
+        var pid = el.getAttribute('data-product-id');
+        if (!pid) return;
+        var product = PRODUCTS.find(function(p) { return p.id === pid; });
+        if (!product) return;
+        var url = product.buyUrl || product.buy_url || '';
+        if (url) {
+          window.open(url, '_blank');
+        }
+      }
+      document.addEventListener('click', handleClick);
+    })();
+
+    // Add hover cursor for clickable products
+    (function() {
+      var style = document.createElement('style');
+      style.textContent = '[data-product-id][data-buy-url] { cursor: pointer; } [data-product-id][data-buy-url]:hover { opacity: 0.9; }';
+      document.head.appendChild(style);
+    })();
+
     ${limits.showWatermark ? 'var wm=document.createElement("div");wm.className="lo-wm";wm.textContent="Powered by LiveOverlay";document.body.appendChild(wm);' : ''}
 
     ${limits.allowLiveControl ? `

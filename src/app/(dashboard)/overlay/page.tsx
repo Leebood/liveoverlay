@@ -93,7 +93,7 @@ export default function OverlayPage() {
       <div className="flex justify-between items-center mb-6">
         <div>
           <Title level={3} className="!mb-1">Overlay配置</Title>
-          <Paragraph type="secondary">管理你的直播Overlay，获取OBS浏览器源URL</Paragraph>
+          <Paragraph type="secondary">管理你的直播Overlay，获取OBS浏览器源URL。设置商品购买链接后，观众点击Overlay中的商品可直接跳转到你的独立站</Paragraph>
         </div>
         <Button
           type="primary"
@@ -129,6 +129,10 @@ export default function OverlayPage() {
 
               <div className="mb-3 text-sm text-gray-500">
                 {overlay.width}x{overlay.height} | {overlay.component_type}
+              </div>
+
+              <div className="mb-3 text-xs text-blue-500 bg-blue-50 p-2 rounded">
+                商品购买链接已启用：观众点击商品可跳转至独立站
               </div>
 
               <Space direction="vertical" className="w-full">
