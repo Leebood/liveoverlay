@@ -107,7 +107,7 @@ export async function POST(request: Request) {
 
     if (action === 'check-session') {
       const { getServerSession } = await import('next-auth');
-      const authOptions = (await import('@/lib/auth')).default;
+      const { authOptions } = await import('@/lib/auth');
       const session = await getServerSession(authOptions);
       return NextResponse.json({ session });
     }
