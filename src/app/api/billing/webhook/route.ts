@@ -72,8 +72,13 @@ async function handleWechatCallback(request: NextRequest) {
   const body = await request.text();
 
   // 验证签名
-  const isValid = verifyWechatCallback(timestamp, nonce, body, signature);
-  if (!isValid) {
+  const headers: Record<string, string> = {
+    'wechatpay-timestamp': timestamp,
+    'wechatpay-nonce': nonce,
+    'wechatpay-signature': signature,
+  };
+  const verifyResult = await verifyWechatCallback(body, headers);
+  if (!verifyResult.success) {
     console.warn('[Webhook/Wechat] 签名验证失败');
   }
 
