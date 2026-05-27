@@ -20,30 +20,33 @@ import {
 import { useSession, signOut } from 'next-auth/react';
 import { useRouter, usePathname } from 'next/navigation';
 import PlanBadge from '@/components/common/PlanBadge';
+import LanguageSwitcher from '@/components/common/LanguageSwitcher';
+import { useI18n } from '@/i18n';
 import type { PlanType } from '@/types/plan';
 
 const { Sider, Header, Content } = Layout;
-
-const menuItems = [
-  { key: '/dashboard', icon: <DashboardOutlined />, label: '控制台' },
-  { key: '/products', icon: <ShoppingOutlined />, label: '商品管理' },
-  { key: '/templates', icon: <AppstoreOutlined />, label: '模板选择' },
-  { key: '/overlay', icon: <DesktopOutlined />, label: 'Overlay配置' },
-  { key: '/live', icon: <VideoCameraOutlined />, label: '直播中控' },
-  { key: '/analytics', icon: <BarChartOutlined />, label: '数据分析' },
-  { key: '/settings', icon: <SettingOutlined />, label: '设置' },
-  { key: '/billing', icon: <CreditCardOutlined />, label: '订阅管理' },
-  { key: '/guide', icon: <BookOutlined />, label: '使用说明' },
-  { key: '/test-plan', icon: <ExperimentOutlined />, label: '计划测试' },
-];
 
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
   const [collapsed, setCollapsed] = useState(false);
   const { data: session } = useSession();
   const router = useRouter();
   const pathname = usePathname();
+  const { t } = useI18n();
 
   const planType = ((session?.user as unknown as Record<string, unknown>)?.planType || 'free') as PlanType;
+
+  const menuItems = [
+    { key: '/dashboard', icon: <DashboardOutlined />, label: t('nav.dashboard') },
+    { key: '/products', icon: <ShoppingOutlined />, label: t('nav.products') },
+    { key: '/templates', icon: <AppstoreOutlined />, label: t('nav.templates') },
+    { key: '/overlay', icon: <DesktopOutlined />, label: t('nav.overlay') },
+    { key: '/live', icon: <VideoCameraOutlined />, label: t('nav.live') },
+    { key: '/analytics', icon: <BarChartOutlined />, label: t('nav.analytics') },
+    { key: '/settings', icon: <SettingOutlined />, label: t('nav.settings') },
+    { key: '/billing', icon: <CreditCardOutlined />, label: t('nav.billing') },
+    { key: '/guide', icon: <BookOutlined />, label: t('nav.guide') },
+    { key: '/test-plan', icon: <ExperimentOutlined />, label: t('nav.testPlan') },
+  ];
 
   const handleMenuClick = (info: { key: string }) => {
     router.push(info.key);
@@ -53,18 +56,17 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
     {
       key: 'billing',
       icon: <CreditCardOutlined />,
-      label: '订阅管理',
+      label: t('nav.billing'),
       onClick: () => router.push('/billing'),
     },
     {
       key: 'logout',
       icon: <LogoutOutlined />,
-      label: '退出登录',
+      label: t('common.logout'),
       onClick: () => signOut({ callbackUrl: '/login' }),
     },
   ];
 
-  // Find the active menu key from pathname
   const activeKey = '/' + (pathname.split('/').filter(Boolean).pop() || '');
 
   return (
@@ -90,11 +92,16 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
           onClick={handleMenuClick}
           className="!bg-gray-900 border-r-0"
         />
+        {/* Language switcher at bottom of sidebar */}
+        <div className="absolute bottom-16 left-0 right-0 flex justify-center">
+          <LanguageSwitcher compact={collapsed} />
+        </div>
       </Sider>
       <Layout>
         <Header className="!bg-white !px-6 flex items-center justify-between shadow-sm">
           <div />
           <div className="flex items-center gap-4">
+            <LanguageSwitcher compact />
             <PlanBadge planType={planType} />
             <Dropdown menu={{ items: userMenuItems }} placement="bottomRight">
               <Button type="text" className="flex items-center gap-2">

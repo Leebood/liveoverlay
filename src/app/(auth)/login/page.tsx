@@ -7,12 +7,15 @@ import { GoogleOutlined, MailOutlined, LockOutlined } from '@ant-design/icons';
 import { signIn } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
+import { useI18n } from '@/i18n';
+import LanguageSwitcher from '@/components/common/LanguageSwitcher';
 
 const { Title, Paragraph } = Typography;
 
 export default function LoginPage() {
   const [loading, setLoading] = useState(false);
   const router = useRouter();
+  const { t } = useI18n();
 
   const handleLogin = async (values: { email: string; password: string }) => {
     setLoading(true);
@@ -22,16 +25,13 @@ export default function LoginPage() {
         password: values.password,
         redirect: false,
       });
-      console.log('[Login] signIn result:', JSON.stringify(result));
       if (result?.ok) {
         router.push('/dashboard');
       } else {
-        const errorMsg = result?.error || '登录失败，请检查邮箱和密码';
-        console.error('[Login] signIn error:', errorMsg);
-        message.error(errorMsg);
+        message.error(result?.error || t('auth.loginFailed'));
       }
     } catch {
-      message.error('登录出错');
+      message.error(t('auth.loginError'));
     } finally {
       setLoading(false);
     }
@@ -39,35 +39,39 @@ export default function LoginPage() {
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-indigo-50 to-purple-50 p-4">
+      {/* Language switcher top-right */}
+      <div className="absolute top-4 right-4">
+        <LanguageSwitcher />
+      </div>
       <Card className="w-full max-w-md shadow-xl">
         <div className="text-center mb-8">
           <Title level={2} className="!mb-2">LiveOverlay</Title>
-          <Paragraph type="secondary">让你的Facebook直播间像淘宝直播间</Paragraph>
+          <Paragraph type="secondary">{t('auth.loginSubtitle')}</Paragraph>
         </div>
 
         <Form layout="vertical" onFinish={handleLogin}>
-          <Form.Item name="email" rules={[{ required: true, type: 'email', message: '请输入有效邮箱' }]}>
-            <Input prefix={<MailOutlined />} placeholder="邮箱" size="large" />
+          <Form.Item name="email" rules={[{ required: true, type: 'email', message: t('auth.emailRequired') }]}>
+            <Input prefix={<MailOutlined />} placeholder={t('auth.email')} size="large" />
           </Form.Item>
-          <Form.Item name="password" rules={[{ required: true, message: '请输入密码' }]}>
-            <Input.Password prefix={<LockOutlined />} placeholder="密码" size="large" />
+          <Form.Item name="password" rules={[{ required: true, message: t('auth.passwordRequired') }]}>
+            <Input.Password prefix={<LockOutlined />} placeholder={t('auth.password')} size="large" />
           </Form.Item>
           <Form.Item>
             <Button type="primary" htmlType="submit" loading={loading} block size="large">
-              登录
+              {t('auth.login')}
             </Button>
           </Form.Item>
         </Form>
 
-        <Divider>或</Divider>
+        <Divider>{t('auth.or')}</Divider>
 
         <Button block size="large" icon={<GoogleOutlined />} onClick={() => signIn('google')}>
-          使用Google登录
+          {t('auth.googleLogin')}
         </Button>
 
         <div className="text-center mt-4">
           <Paragraph type="secondary">
-            还没有账号？ <Link href="/register">立即注册</Link>
+            {t('auth.noAccount')} <Link href="/register">{t('auth.registerNow')}</Link>
           </Paragraph>
         </div>
       </Card>

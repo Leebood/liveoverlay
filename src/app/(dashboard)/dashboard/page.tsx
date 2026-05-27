@@ -11,6 +11,7 @@ import {
 import { useRouter } from 'next/navigation';
 import { useSession } from 'next-auth/react';
 import { getPlanLimits } from '@/lib/plan-limits';
+import { useI18n } from '@/i18n';
 import type { PlanType } from '@/types/plan';
 
 const { Title, Paragraph } = Typography;
@@ -18,6 +19,7 @@ const { Title, Paragraph } = Typography;
 export default function DashboardPage() {
   const router = useRouter();
   const { data: session } = useSession();
+  const { t } = useI18n();
   const planType = ((session?.user as unknown as Record<string, unknown>)?.planType || 'free') as PlanType;
   const limits = getPlanLimits(planType);
 
@@ -25,17 +27,17 @@ export default function DashboardPage() {
     <div>
       <div className="flex justify-between items-center mb-6">
         <div>
-          <Title level={3} className="!mb-1">控制台</Title>
+          <Title level={3} className="!mb-1">{t('dashboard.title')}</Title>
           <Paragraph type="secondary">
-            欢迎回来，{session?.user?.name || '商家'}！当前计划：{limits.displayName}
+            {t('dashboard.welcome')}{session?.user?.name || t('dashboard.merchant')}！{t('dashboard.currentPlan')}{limits.displayName}
           </Paragraph>
         </div>
         <Space>
           <Button type="primary" icon={<PlusOutlined />} onClick={() => router.push('/products')}>
-            添加商品
+            {t('dashboard.addProduct')}
           </Button>
           <Button icon={<VideoCameraOutlined />} onClick={() => router.push('/live')}>
-            开始直播
+            {t('dashboard.startLive')}
           </Button>
         </Space>
       </div>
@@ -44,7 +46,7 @@ export default function DashboardPage() {
         <Col xs={24} sm={8}>
           <Card hoverable>
             <Statistic
-              title="商品数量"
+              title={t('dashboard.productCount')}
               value={0}
               suffix={`/ ${limits.maxProducts === -1 ? '∞' : limits.maxProducts}`}
               prefix={<ShoppingOutlined />}
@@ -54,7 +56,7 @@ export default function DashboardPage() {
         <Col xs={24} sm={8}>
           <Card hoverable>
             <Statistic
-              title="活跃Overlay"
+              title={t('dashboard.activeOverlay')}
               value={0}
               prefix={<DesktopOutlined />}
             />
@@ -63,7 +65,7 @@ export default function DashboardPage() {
         <Col xs={24} sm={8}>
           <Card hoverable>
             <Statistic
-              title="直播场次"
+              title={t('dashboard.liveSessions')}
               value={0}
               prefix={<VideoCameraOutlined />}
               valueStyle={{ color: '#3f8600' }}
@@ -74,27 +76,27 @@ export default function DashboardPage() {
 
       <Row gutter={[16, 16]} className="mt-6">
         <Col span={24}>
-          <Card title="快速开始">
+          <Card title={t('dashboard.quickStart')}>
             <Row gutter={[16, 16]}>
               <Col xs={24} md={8}>
                 <Card.Grid className="!w-full !p-4 hover:bg-gray-50 cursor-pointer" onClick={() => router.push('/products')}>
                   <ShoppingOutlined className="text-2xl text-indigo-500 mb-2" />
-                  <Title level={5}>1. 添加商品</Title>
-                  <Paragraph type="secondary">录入你的直播商品信息</Paragraph>
+                  <Title level={5}>{t('dashboard.step1Title')}</Title>
+                  <Paragraph type="secondary">{t('dashboard.step1Desc')}</Paragraph>
                 </Card.Grid>
               </Col>
               <Col xs={24} md={8}>
                 <Card.Grid className="!w-full !p-4 hover:bg-gray-50 cursor-pointer" onClick={() => router.push('/templates')}>
                   <DesktopOutlined className="text-2xl text-indigo-500 mb-2" />
-                  <Title level={5}>2. 选择模板</Title>
-                  <Paragraph type="secondary">选择合适的Overlay模板</Paragraph>
+                  <Title level={5}>{t('dashboard.step2Title')}</Title>
+                  <Paragraph type="secondary">{t('dashboard.step2Desc')}</Paragraph>
                 </Card.Grid>
               </Col>
               <Col xs={24} md={8}>
                 <Card.Grid className="!w-full !p-4 hover:bg-gray-50 cursor-pointer" onClick={() => router.push('/overlay')}>
                   <VideoCameraOutlined className="text-2xl text-indigo-500 mb-2" />
-                  <Title level={5}>3. 配置并开播</Title>
-                  <Paragraph type="secondary">获取Overlay URL，添加到OBS</Paragraph>
+                  <Title level={5}>{t('dashboard.step3Title')}</Title>
+                  <Paragraph type="secondary">{t('dashboard.step3Desc')}</Paragraph>
                 </Card.Grid>
               </Col>
             </Row>

@@ -2,6 +2,7 @@ import type { Metadata } from 'next';
 import { AntdRegistry } from '@ant-design/nextjs-registry';
 import './globals.css';
 import { AuthProvider } from '@/components/common/AuthProvider';
+import { I18nProvider } from '@/i18n';
 
 export const metadata: Metadata = {
   title: {
@@ -35,11 +36,13 @@ export default function RootLayout({
   return (
     <html lang="zh-CN">
       <body className={`antialiased`}>
-        <AuthProvider>
-          <AntdRegistry>
-            {children}
-          </AntdRegistry>
-        </AuthProvider>
+        <I18nProvider>
+          <AuthProvider>
+            <AntdRegistry>
+              {children}
+            </AntdRegistry>
+          </AuthProvider>
+        </I18nProvider>
       </body>
     </html>
   );
