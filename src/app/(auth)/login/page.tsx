@@ -22,10 +22,13 @@ export default function LoginPage() {
         password: values.password,
         redirect: false,
       });
+      console.log('[Login] signIn result:', JSON.stringify(result));
       if (result?.ok) {
-        router.push('/');
+        router.push('/dashboard');
       } else {
-        message.error('登录失败，请检查邮箱和密码');
+        const errorMsg = result?.error || '登录失败，请检查邮箱和密码';
+        console.error('[Login] signIn error:', errorMsg);
+        message.error(errorMsg);
       }
     } catch {
       message.error('登录出错');
