@@ -25,10 +25,21 @@ export default function LoginPage() {
         password: values.password,
         redirect: false,
       });
+      // NextAuth with redirect:false may return ok:true or set session
+      // Check both result.ok and whether there's a valid session
       if (result?.ok) {
         router.push('/dashboard');
       } else {
-        message.error(result?.error || t('auth.loginFailed'));
+        // Double-check session - sometimes result.ok is false but login succeeded
+        const sessionRes = await fetch('/api/auth/session');
+        const session = await sessionRes.json();
+        if (session?.user) {
+          router.push('/dashboard');
+        } else {
+          message.error(result?.error === 'CredentialsSignin' 
+            ? (t('auth.loginFailed') || '邮箱或密码错误') 
+            : (result?.error || t('auth.loginFailed')));
+        }
       }
     } catch {
       message.error(t('auth.loginError'));
