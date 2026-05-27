@@ -15,6 +15,7 @@ import {
   UserOutlined,
   LogoutOutlined,
   BookOutlined,
+  ExperimentOutlined,
 } from '@ant-design/icons';
 import { useSession, signOut } from 'next-auth/react';
 import { useRouter, usePathname } from 'next/navigation';
@@ -33,6 +34,7 @@ const menuItems = [
   { key: '/settings', icon: <SettingOutlined />, label: '设置' },
   { key: '/billing', icon: <CreditCardOutlined />, label: '订阅管理' },
   { key: '/guide', icon: <BookOutlined />, label: '使用说明' },
+  { key: '/test-plan', icon: <ExperimentOutlined />, label: '计划测试' },
 ];
 
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
