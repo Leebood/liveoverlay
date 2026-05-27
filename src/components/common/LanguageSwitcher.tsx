@@ -25,8 +25,6 @@ export default function LanguageSwitcher({ compact = false }: { compact?: boolea
         selectedKeys: [locale],
         onClick: ({ key }) => {
           setLocale(key as 'zh' | 'en');
-          // Refresh page to apply new language
-          window.location.reload();
         },
       }}
       placement="bottomRight"

@@ -1,6 +1,6 @@
 'use client';
 
-import React, { createContext, useContext, useState, useCallback, useEffect } from 'react';
+import React, { createContext, useContext, useState, useCallback, useEffect, useMemo } from 'react';
 import type { Locale } from './types';
 import { defaultLocale, locales } from './types';
 import { zh } from './zh';
@@ -22,22 +22,23 @@ const I18nContext = createContext<I18nContextType>({
 
 const STORAGE_KEY = 'liveoverlay-locale';
 
+function getInitialLocale(): Locale {
+  // Only runs on client
+  if (typeof window === 'undefined') return defaultLocale;
+  const saved = localStorage.getItem(STORAGE_KEY) as Locale | null;
+  if (saved && locales.includes(saved)) return saved;
+  const browserLang = navigator.language.toLowerCase();
+  return browserLang.startsWith('zh') ? 'zh' : 'en';
+}
+
 export function I18nProvider({ children }: { children: React.ReactNode }) {
   const [locale, setLocaleState] = useState<Locale>(defaultLocale);
+  const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
-    const saved = localStorage.getItem(STORAGE_KEY) as Locale | null;
-    if (saved && locales.includes(saved)) {
-      setLocaleState(saved);
-    } else {
-      // Auto detect browser language
-      const browserLang = navigator.language.toLowerCase();
-      if (browserLang.startsWith('zh')) {
-        setLocaleState('zh');
-      } else {
-        setLocaleState('en');
-      }
-    }
+    const initial = getInitialLocale();
+    setLocaleState(initial);
+    setMounted(true);
   }, []);
 
   const setLocale = useCallback((newLocale: Locale) => {
@@ -48,7 +49,8 @@ export function I18nProvider({ children }: { children: React.ReactNode }) {
 
   const t = useCallback(
     (key: string, params?: Record<string, string | number>): string => {
-      let text = translations[locale]?.[key] || translations[defaultLocale]?.[key] || key;
+      const currentLocale = mounted ? locale : defaultLocale;
+      let text = translations[currentLocale]?.[key] || translations[defaultLocale]?.[key] || key;
       if (params) {
         Object.entries(params).forEach(([k, v]) => {
           text = text.replace(new RegExp(`\\{${k}\\}`, 'g'), String(v));
@@ -56,11 +58,16 @@ export function I18nProvider({ children }: { children: React.ReactNode }) {
       }
       return text;
     },
-    [locale]
+    [locale, mounted]
+  );
+
+  const contextValue = useMemo(
+    () => ({ locale, setLocale, t }),
+    [locale, setLocale, t]
   );
 
   return (
-    <I18nContext.Provider value={{ locale, setLocale, t }}>
+    <I18nContext.Provider value={contextValue}>
       {children}
     </I18nContext.Provider>
   );
