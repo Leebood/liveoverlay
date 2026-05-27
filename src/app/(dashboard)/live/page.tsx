@@ -1,4 +1,3 @@
-// src/app/(dashboard)/live/page.tsx
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
@@ -15,6 +14,7 @@ import {
 import { useSession } from 'next-auth/react';
 import { useStore } from '@/hooks/useStore';
 import FeatureGate from '@/components/common/FeatureGate';
+import { useI18n } from '@/i18n';
 import type { PlanType } from '@/types/plan';
 
 const { Title, Paragraph, Text } = Typography;
@@ -31,11 +31,16 @@ export default function LivePage() {
   const { data: session } = useSession();
   const planType = ((session?.user as Record<string, unknown>)?.planType || 'free') as PlanType;
   const { storeId, loading: storeLoading } = useStore();
+  const { t } = useI18n();
   const [isLive, setIsLive] = useState(false);
   const [products, setProducts] = useState<Product[]>([]);
   const [countdownModal, setCountdownModal] = useState(false);
   const [countdownSeconds, setCountdownSeconds] = useState(300);
-  const [countdownText, setCountdownText] = useState('限时优惠');
+  const [countdownText, setCountdownText] = useState('');
+
+  useEffect(() => {
+    setCountdownText(t('live.defaultCountdownText'));
+  }, [t]);
 
   useEffect(() => {
     if (!storeId) return;
@@ -53,11 +58,11 @@ export default function LivePage() {
         body: JSON.stringify({ storeId, action, ...payload }),
       });
       const data = await res.json();
-      if (!res.ok) message.error(data.error || '控制失败');
+      if (!res.ok) message.error(data.error || t('live.controlFailed'));
     } catch {
-      message.error('网络错误');
+      message.error(t('common.networkError'));
     }
-  }, [storeId]);
+  }, [storeId, t]);
 
   const handleStartLive = async () => {
     try {
@@ -68,10 +73,10 @@ export default function LivePage() {
       });
       if (res.ok) {
         setIsLive(true);
-        message.success('直播已开始');
+        message.success(t('live.started'));
       }
     } catch {
-      message.error('开始直播失败');
+      message.error(t('live.startFailed'));
     }
   };
 
@@ -79,9 +84,9 @@ export default function LivePage() {
     try {
       await sendControl('toggle_visibility', { visible: false });
       setIsLive(false);
-      message.info('直播已结束');
+      message.info(t('live.ended'));
     } catch {
-      message.error('结束直播失败');
+      message.error(t('live.endFailed'));
     }
   };
 
@@ -106,21 +111,23 @@ export default function LivePage() {
     sendControl('flash_deal', { productId, price, duration: 60 });
   };
 
+  if (storeLoading) return <div className="p-6 text-gray-500">{t('common.loading')}</div>;
+
   return (
     <div>
       <div className="flex justify-between items-center mb-6">
         <div>
-          <Title level={3} className="!mb-1">直播中控台</Title>
-          <Paragraph type="secondary">实时控制你的直播Overlay</Paragraph>
+          <Title level={3} className="!mb-1">{t('live.title')}</Title>
+          <Paragraph type="secondary">{t('live.subtitle')}</Paragraph>
         </div>
         <Space>
           {isLive ? (
             <Button danger icon={<StopOutlined />} onClick={handleEndLive}>
-              结束直播
+              {t('live.endLive')}
             </Button>
           ) : (
             <Button type="primary" icon={<VideoCameraOutlined />} onClick={handleStartLive}>
-              开始直播
+              {t('live.startLive')}
             </Button>
           )}
         </Space>
@@ -129,10 +136,10 @@ export default function LivePage() {
       {isLive && (
         <Row gutter={[16, 16]}>
           <Col xs={24} md={16}>
-            <Card title="商品列表" extra={
+            <Card title={t('live.productList')} extra={
               <Space>
-                <Button size="small" icon={<EyeOutlined />} onClick={() => handleToggleOverlay(true)}>显示</Button>
-                <Button size="small" icon={<EyeInvisibleOutlined />} onClick={() => handleToggleOverlay(false)}>隐藏</Button>
+                <Button size="small" icon={<EyeOutlined />} onClick={() => handleToggleOverlay(true)}>{t('live.show')}</Button>
+                <Button size="small" icon={<EyeInvisibleOutlined />} onClick={() => handleToggleOverlay(false)}>{t('live.hide')}</Button>
               </Space>
             }>
               <List
@@ -140,30 +147,30 @@ export default function LivePage() {
                 renderItem={(product) => (
                   <List.Item
                     actions={[
-                      <Button size="small" icon={<StarOutlined />} onClick={() => handleHighlight(product.id)} key="highlight">主推</Button>,
+                      <Button size="small" icon={<StarOutlined />} onClick={() => handleHighlight(product.id)} key="highlight">{t('live.featured')}</Button>,
                       <FeatureGate feature="allowLiveControl" key="flash">
                         <Button size="small" icon={<ThunderboltOutlined />} onClick={() => {
                           Modal.confirm({
-                            title: '设置闪购价',
-                            content: <InputNumber min={0} step={0.01} prefix="$" defaultValue={parseFloat(product.price) * 0.8} id="flash-price" />,
+                            title: t('live.setFlashPrice'),
+                            content: <InputNumber min={0} step={0.01} prefix="¥" defaultValue={parseFloat(product.price) * 0.8} id="flash-price" />,
                             onOk: () => {
                               const priceInput = document.querySelector('#flash-price input') as HTMLInputElement;
                               if (priceInput) handleFlashDeal(product.id, parseFloat(priceInput.value));
                             },
                           });
-                        }}>闪购</Button>
+                        }}>{t('live.flashDeal')}</Button>
                       </FeatureGate>,
                     ]}
                   >
                     <List.Item.Meta
                       title={<Space>{product.name} {product.tag && <Tag color="blue">{product.tag}</Tag>}</Space>}
-                      description={<Text className="text-red-500 font-semibold">${parseFloat(product.price).toFixed(2)}</Text>}
+                      description={<Text className="text-red-500 font-semibold">¥{parseFloat(product.price).toFixed(2)}</Text>}
                     />
                   </List.Item>
                 )}
               />
               <div className="mt-4">
-                <Button onClick={handleUnhighlight}>取消主推</Button>
+                <Button onClick={handleUnhighlight}>{t('live.cancelFeatured')}</Button>
               </div>
             </Card>
           </Col>
@@ -171,26 +178,26 @@ export default function LivePage() {
           <Col xs={24} md={8}>
             <Space direction="vertical" className="w-full" size={16}>
               <FeatureGate feature="allowLiveControl">
-                <Card title="快捷操作" size="small">
+                <Card title={t('live.quickActions')} size="small">
                   <Space direction="vertical" className="w-full">
                     <Button block icon={<ClockCircleOutlined />} onClick={() => setCountdownModal(true)}>
-                      倒计时
+                      {t('live.countdown')}
                     </Button>
                     <Button block onClick={() => sendControl('hide_countdown')}>
-                      关闭倒计时
+                      {t('live.closeCountdown')}
                     </Button>
                   </Space>
                 </Card>
               </FeatureGate>
 
-              <Card title="直播状态" size="small">
+              <Card title={t('live.liveStatus')} size="small">
                 <div className="space-y-2">
                   <div className="flex justify-between">
-                    <Text type="secondary">状态</Text>
-                    <Tag color="green">直播中</Tag>
+                    <Text type="secondary">{t('live.status')}</Text>
+                    <Tag color="green">{t('live.streaming')}</Tag>
                   </div>
                   <div className="flex justify-between">
-                    <Text type="secondary">商品数</Text>
+                    <Text type="secondary">{t('live.productCount')}</Text>
                     <Text>{products.length}</Text>
                   </div>
                 </div>
@@ -203,24 +210,24 @@ export default function LivePage() {
       {!isLive && (
         <div className="text-center py-20">
           <VideoCameraOutlined className="text-6xl text-gray-300 mb-4" />
-          <Title level={4} type="secondary">准备开始直播</Title>
-          <Paragraph type="secondary">点击"开始直播"按钮，进入直播中控模式</Paragraph>
+          <Title level={4} type="secondary">{t('live.readyToStart')}</Title>
+          <Paragraph type="secondary">{t('live.clickToStart')}</Paragraph>
         </div>
       )}
 
       <Modal
-        title="设置倒计时"
+        title={t('live.setCountdown')}
         open={countdownModal}
         onCancel={() => setCountdownModal(false)}
         onOk={handleShowCountdown}
       >
         <div className="space-y-4">
           <div>
-            <Text>倒计时文字</Text>
+            <Text>{t('live.countdownText')}</Text>
             <Input value={countdownText} onChange={e => setCountdownText(e.target.value)} className="mt-1" />
           </div>
           <div>
-            <Text>倒计时秒数</Text>
+            <Text>{t('live.countdownSeconds')}</Text>
             <InputNumber value={countdownSeconds} onChange={v => setCountdownSeconds(v || 300)} min={10} max={86400} className="w-full mt-1" />
           </div>
         </div>

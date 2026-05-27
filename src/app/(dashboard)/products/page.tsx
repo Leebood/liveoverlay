@@ -1,12 +1,12 @@
-// src/app/(dashboard)/products/page.tsx
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
 import { Table, Button, Modal, Form, Input, InputNumber, Upload, Tag, Space, message, Popconfirm } from 'antd';
-import { PlusOutlined, EditOutlined, DeleteOutlined, UploadOutlined } from '@ant-design/icons';
+import { PlusOutlined, EditOutlined, DeleteOutlined } from '@ant-design/icons';
 import { useSession } from 'next-auth/react';
 import { getPlanLimits } from '@/lib/plan-limits';
 import { useStore } from '@/hooks/useStore';
+import { useI18n } from '@/i18n';
 import type { PlanType } from '@/types/plan';
 
 interface Product {
@@ -30,6 +30,7 @@ export default function ProductsPage() {
   const planType = ((session?.user as Record<string, unknown>)?.planType || 'free') as PlanType;
   const limits = getPlanLimits(planType);
   const { storeId, loading: storeLoading } = useStore();
+  const { t } = useI18n();
 
   const [products, setProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(false);
@@ -47,18 +48,18 @@ export default function ProductsPage() {
         setProducts(data.products);
       }
     } catch {
-      message.error('加载商品失败');
+      message.error(t('products.loadFailed'));
     } finally {
       setLoading(false);
     }
-  }, [storeId]);
+  }, [storeId, t]);
 
   useEffect(() => {
     fetchProducts();
   }, [fetchProducts]);
 
-  if (storeLoading) return <div className="p-6 text-gray-500">加载中...</div>;
-  if (!storeId) return <div className="p-6 text-gray-500">未找到店铺信息，请刷新页面重试</div>;
+  if (storeLoading) return <div className="p-6 text-gray-500">{t('common.loading')}</div>;
+  if (!storeId) return <div className="p-6 text-gray-500">{t('products.noStore')}</div>;
 
   const handleSubmit = async (values: Record<string, unknown>) => {
     try {
@@ -73,16 +74,16 @@ export default function ProductsPage() {
 
       const data = await res.json();
       if (res.ok) {
-        message.success(editingProduct ? '商品已更新' : '商品已创建');
+        message.success(editingProduct ? t('products.updated') : t('products.created'));
         setModalOpen(false);
         setEditingProduct(null);
         form.resetFields();
         fetchProducts();
       } else {
-        message.error(data.error || '操作失败');
+        message.error(data.error || t('common.operationFailed'));
       }
     } catch {
-      message.error('网络错误');
+      message.error(t('common.networkError'));
     }
   };
 
@@ -90,17 +91,17 @@ export default function ProductsPage() {
     try {
       const res = await fetch(`/api/products?id=${id}`, { method: 'DELETE' });
       if (res.ok) {
-        message.success('商品已删除');
+        message.success(t('products.deleted'));
         fetchProducts();
       }
     } catch {
-      message.error('删除失败');
+      message.error(t('products.deleteFailed'));
     }
   };
 
   const columns = [
     {
-      title: '商品名称',
+      title: t('products.name'),
       dataIndex: 'name',
       key: 'name',
       render: (text: string, record: Product) => (
@@ -113,25 +114,25 @@ export default function ProductsPage() {
       ),
     },
     {
-      title: '价格',
+      title: t('products.price'),
       dataIndex: 'price',
       key: 'price',
-      render: (price: string) => <span className="text-red-500 font-semibold">${parseFloat(price).toFixed(2)}</span>,
+      render: (price: string) => <span className="text-red-500 font-semibold">¥{parseFloat(price).toFixed(2)}</span>,
     },
     {
-      title: '原价',
+      title: t('products.originalPrice'),
       dataIndex: 'original_price',
       key: 'original_price',
-      render: (price: string | null) => price ? <span className="line-through text-gray-400">${parseFloat(price).toFixed(2)}</span> : '-',
+      render: (price: string | null) => price ? <span className="line-through text-gray-400">¥{parseFloat(price).toFixed(2)}</span> : '-',
     },
     {
-      title: '标签',
+      title: t('products.tag'),
       dataIndex: 'tag',
       key: 'tag',
       render: (tag: string | null) => tag ? <Tag color="blue">{tag}</Tag> : '-',
     },
     {
-      title: '购买链接',
+      title: t('products.buyUrl'),
       dataIndex: 'buy_url',
       key: 'buy_url',
       width: 120,
@@ -139,16 +140,16 @@ export default function ProductsPage() {
         <a href={url} target="_blank" rel="noopener noreferrer" className="text-blue-500 hover:text-blue-600 truncate block max-w-[120px]" title={url}>
           {url.replace(/^https?:\/\/(www\.)?/, '').split('/')[0]}
         </a>
-      ) : <span className="text-gray-300">未设置</span>,
+      ) : <span className="text-gray-300">{t('products.notSet')}</span>,
     },
     {
-      title: '状态',
+      title: t('products.status'),
       dataIndex: 'is_active',
       key: 'is_active',
-      render: (active: boolean) => <Tag color={active ? 'green' : 'red'}>{active ? '上架' : '下架'}</Tag>,
+      render: (active: boolean) => <Tag color={active ? 'green' : 'red'}>{active ? t('products.active') : t('products.inactive')}</Tag>,
     },
     {
-      title: '操作',
+      title: t('common.actions'),
       key: 'actions',
       render: (_: unknown, record: Product) => (
         <Space>
@@ -165,7 +166,7 @@ export default function ProductsPage() {
             });
             setModalOpen(true);
           }} />
-          <Popconfirm title="确定删除此商品？" onConfirm={() => handleDelete(record.id)}>
+          <Popconfirm title={t('products.confirmDelete')} onConfirm={() => handleDelete(record.id)}>
             <Button size="small" danger icon={<DeleteOutlined />} />
           </Popconfirm>
         </Space>
@@ -178,7 +179,7 @@ export default function ProductsPage() {
   return (
     <div>
       <div className="flex justify-between items-center mb-4">
-        <h2 className="text-xl font-semibold m-0">商品管理</h2>
+        <h2 className="text-xl font-semibold m-0">{t('products.title')}</h2>
         <Space>
           <span className="text-gray-500">
             {products.length} / {limits.maxProducts === -1 ? '∞' : limits.maxProducts}
@@ -193,14 +194,14 @@ export default function ProductsPage() {
               setModalOpen(true);
             }}
           >
-            添加商品
+            {t('products.addProduct')}
           </Button>
         </Space>
       </div>
 
       {!canAddProduct && (
         <div className="mb-4 p-3 bg-amber-50 rounded text-amber-700">
-          商品数量已达上限 ({limits.maxProducts})，请升级计划以添加更多商品
+          {t('products.limitReached', { count: String(limits.maxProducts) })}
         </div>
       )}
 
@@ -213,39 +214,39 @@ export default function ProductsPage() {
       />
 
       <Modal
-        title={editingProduct ? '编辑商品' : '添加商品'}
+        title={editingProduct ? t('products.editProduct') : t('products.addProduct')}
         open={modalOpen}
         onCancel={() => { setModalOpen(false); setEditingProduct(null); }}
         onOk={() => form.submit()}
       >
         <Form form={form} layout="vertical" onFinish={handleSubmit}>
-          <Form.Item name="name" label="商品名称" rules={[{ required: true, message: '请输入商品名称' }]}>
-            <Input placeholder="输入商品名称" />
+          <Form.Item name="name" label={t('products.name')} rules={[{ required: true, message: t('products.nameRequired') }]}>
+            <Input placeholder={t('products.namePlaceholder')} />
           </Form.Item>
-          <Form.Item name="price" label="价格" rules={[{ required: true, message: '请输入价格' }]}>
-            <InputNumber min={0} step={0.01} className="w-full" prefix="$" />
+          <Form.Item name="price" label={t('products.price')} rules={[{ required: true, message: t('products.priceRequired') }]}>
+            <InputNumber min={0} step={0.01} className="w-full" prefix="¥" />
           </Form.Item>
-          <Form.Item name="originalPrice" label="原价">
-            <InputNumber min={0} step={0.01} className="w-full" prefix="$" />
+          <Form.Item name="originalPrice" label={t('products.originalPrice')}>
+            <InputNumber min={0} step={0.01} className="w-full" prefix="¥" />
           </Form.Item>
-          <Form.Item name="description" label="描述">
+          <Form.Item name="description" label={t('products.description')}>
             <Input.TextArea rows={3} />
           </Form.Item>
-          <Form.Item name="tag" label="标签">
-            <Input placeholder="如: 新品, 热卖, 限时" />
+          <Form.Item name="tag" label={t('products.tag')}>
+            <Input placeholder={t('products.tagPlaceholder')} />
           </Form.Item>
-          <Form.Item name="buyUrl" label="购买链接" tooltip="填写商品在独立站的链接，Overlay 中点击可跳转购买" rules={[{ type: 'url', message: '请输入有效的 URL 地址' }]}>
-            <Input placeholder="https://your-store.com/product/xxx" addonAfter={<a href={form.getFieldValue('buyUrl') || '#'} target="_blank" rel="noopener noreferrer" onClick={(e) => { if (!form.getFieldValue('buyUrl')) e.preventDefault(); }} style={{ color: form.getFieldValue('buyUrl') ? '#1677ff' : '#999' }}>测试</a>} />
+          <Form.Item name="buyUrl" label={t('products.buyUrl')} tooltip={t('products.buyUrlTooltip')} rules={[{ type: 'url', message: t('products.buyUrlInvalid') }]}>
+            <Input placeholder="https://your-store.com/product/xxx" />
           </Form.Item>
-          <Form.Item name="category" label="分类">
-            <Input placeholder="如: 电子产品, 美妆, 服饰" />
+          <Form.Item name="category" label={t('products.category')}>
+            <Input placeholder={t('products.categoryPlaceholder')} />
           </Form.Item>
-          <Form.Item name="images" label="商品图片" valuePropName="fileList" getValueFromEvent={(e) => {
+          <Form.Item name="images" label={t('products.images')} valuePropName="fileList" getValueFromEvent={(e: unknown) => {
             if (Array.isArray(e)) return e;
-            return e?.fileList;
+            return (e as { fileList?: unknown })?.fileList;
           }}>
             <Upload listType="picture-card" maxCount={limits.maxImagesPerProduct} beforeUpload={() => false}>
-              <div><PlusOutlined /> 上传</div>
+              <div><PlusOutlined /> {t('products.upload')}</div>
             </Upload>
           </Form.Item>
         </Form>

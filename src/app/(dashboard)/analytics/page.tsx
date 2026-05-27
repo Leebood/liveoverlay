@@ -1,19 +1,20 @@
-// src/app/(dashboard)/analytics/page.tsx
 'use client';
 
-import { useState } from 'react';
-import { Card, Typography, Empty, Table, Tag, DatePicker, Space } from 'antd';
+import { Card, Typography, Empty } from 'antd';
 import { BarChartOutlined } from '@ant-design/icons';
 import FeatureGate from '@/components/common/FeatureGate';
+import { useI18n } from '@/i18n';
 
 const { Title, Paragraph } = Typography;
 
 export default function AnalyticsPage() {
+  const { t } = useI18n();
+
   return (
     <div>
       <div className="mb-6">
-        <Title level={3} className="!mb-1">数据分析</Title>
-        <Paragraph type="secondary">查看直播数据和商品互动统计</Paragraph>
+        <Title level={3} className="!mb-1">{t('analytics.title')}</Title>
+        <Paragraph type="secondary">{t('analytics.subtitle')}</Paragraph>
       </div>
 
       <FeatureGate
@@ -21,12 +22,12 @@ export default function AnalyticsPage() {
         fallback={
           <div className="text-center py-20">
             <BarChartOutlined className="text-6xl text-gray-300 mb-4" />
-            <Title level={4} type="secondary">数据分析需要Pro及以上计划</Title>
-            <Paragraph type="secondary">升级到Pro计划，解锁直播数据分析和商品点击统计</Paragraph>
+            <Title level={4} type="secondary">{t('analytics.needPro')}</Title>
+            <Paragraph type="secondary">{t('analytics.upgradeHint')}</Paragraph>
           </div>
         }
       >
-        <Empty description="暂无数据，开始直播后将自动收集" />
+        <Empty description={t('analytics.noData')} />
       </FeatureGate>
     </div>
   );

@@ -8,6 +8,7 @@ import { useSession } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
 import { getPlanLimits } from '@/lib/plan-limits';
 import { useStore } from '@/hooks/useStore';
+import { useI18n } from '@/i18n';
 import type { PlanType } from '@/types/plan';
 
 const { Title, Paragraph, Text } = Typography;
@@ -26,6 +27,7 @@ interface Overlay {
 }
 
 export default function OverlayPage() {
+  const { t } = useI18n();
   const { data: session } = useSession();
   const router = useRouter();
   const planType = ((session?.user as Record<string, unknown>)?.planType || 'free') as PlanType;
@@ -63,27 +65,26 @@ export default function OverlayPage() {
       });
       const data = await res.json();
       if (res.ok) {
-        message.success('Overlay已创建');
+        message.success(t('overlay.created'));
         setCreateModalOpen(false);
         form.resetFields();
-        // Refresh
         const overlayData = await (await fetch(`/api/overlay?storeId=${storeId}`)).json();
         if (overlayData.overlays) setOverlays(overlayData.overlays);
       } else {
-        message.error(data.error || '创建失败');
+        message.error(data.error || t('overlay.createFailed'));
       }
     } catch {
-      message.error('网络错误');
+      message.error(t('common.networkError'));
     }
   };
 
-  if (storeLoading) return <div className="p-6 text-gray-500">加载中...</div>;
-  if (!storeId) return <div className="p-6 text-gray-500">未找到店铺信息，请刷新页面重试</div>;
+  if (storeLoading) return <div className="p-6 text-gray-500">{t('common.loading')}</div>;
+  if (!storeId) return <div className="p-6 text-gray-500">{t('common.noStore')}</div>;
 
   const copyOverlayUrl = (overlay: Overlay) => {
     const url = `${window.location.origin}/overlay/${storeId}/${overlay.id}`;
     navigator.clipboard.writeText(url);
-    message.success('Overlay URL已复制到剪贴板');
+    message.success(t('overlay.urlCopied'));
   };
 
   const canCreate = limits.maxSimultaneousOverlays === -1 || overlays.length < limits.maxSimultaneousOverlays;
@@ -92,8 +93,8 @@ export default function OverlayPage() {
     <div>
       <div className="flex justify-between items-center mb-6">
         <div>
-          <Title level={3} className="!mb-1">Overlay配置</Title>
-          <Paragraph type="secondary">管理你的直播Overlay，获取OBS浏览器源URL。设置商品购买链接后，观众点击Overlay中的商品可直接跳转到你的独立站</Paragraph>
+          <Title level={3} className="!mb-1">{t('overlay.title')}</Title>
+          <Paragraph type="secondary">{t('overlay.description')}</Paragraph>
         </div>
         <Button
           type="primary"
@@ -101,18 +102,18 @@ export default function OverlayPage() {
           disabled={!canCreate}
           onClick={() => setCreateModalOpen(true)}
         >
-          创建Overlay
+          {t('overlay.create')}
         </Button>
       </div>
 
       {!canCreate && (
         <div className="mb-4 p-3 bg-amber-50 rounded text-amber-700">
-          Overlay数量已达上限 ({limits.maxSimultaneousOverlays})，请升级计划
+          {t('overlay.limitReached', { count: limits.maxSimultaneousOverlays })}
         </div>
       )}
 
       {overlays.length === 0 ? (
-        <Empty description="还没有创建Overlay，点击上方按钮创建" />
+        <Empty description={t('overlay.empty')} />
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
           {overlays.map(overlay => (
@@ -121,7 +122,7 @@ export default function OverlayPage() {
                 <div className="flex justify-between items-center">
                   <Text strong className="text-lg">{overlay.name}</Text>
                   <Tag color={overlay.is_visible ? 'green' : 'red'}>
-                    {overlay.is_visible ? '显示' : '隐藏'}
+                    {overlay.is_visible ? t('overlay.visible') : t('overlay.hidden')}
                   </Tag>
                 </div>
                 <Text type="secondary">{overlay.template_id}</Text>
@@ -132,7 +133,7 @@ export default function OverlayPage() {
               </div>
 
               <div className="mb-3 text-xs text-blue-500 bg-blue-50 p-2 rounded">
-                商品购买链接已启用：观众点击商品可跳转至独立站
+                {t('overlay.buyLinkEnabled')}
               </div>
 
               <Space direction="vertical" className="w-full">
@@ -141,11 +142,11 @@ export default function OverlayPage() {
                   onClick={() => copyOverlayUrl(overlay)}
                   className="w-full"
                 >
-                  复制Overlay URL
+                  {t('overlay.copyUrl')}
                 </Button>
                 <Space>
-                  <Button icon={<EyeOutlined />} size="small">预览</Button>
-                  <Button icon={<SettingOutlined />} size="small">配置</Button>
+                  <Button icon={<EyeOutlined />} size="small">{t('overlay.preview')}</Button>
+                  <Button icon={<SettingOutlined />} size="small">{t('overlay.config')}</Button>
                 </Space>
               </Space>
             </Card>
@@ -154,26 +155,26 @@ export default function OverlayPage() {
       )}
 
       <Modal
-        title="创建Overlay"
+        title={t('overlay.createOverlay')}
         open={createModalOpen}
         onCancel={() => setCreateModalOpen(false)}
         onOk={() => form.submit()}
       >
         <Form form={form} layout="vertical" onFinish={handleCreate}>
-          <Form.Item name="name" label="名称" rules={[{ required: true }]}>
-            <Input placeholder="如：主商品滚动条" />
+          <Form.Item name="name" label={t('overlay.name')} rules={[{ required: true }]}>
+            <Input placeholder={t('overlay.namePlaceholder')} />
           </Form.Item>
-          <Form.Item name="templateId" label="模板" rules={[{ required: true }]}>
-            <Select placeholder="选择模板">
+          <Form.Item name="templateId" label={t('overlay.template')} rules={[{ required: true }]}>
+            <Select placeholder={t('overlay.selectTemplate')}>
               {templates.map(t => (
                 <Select.Option key={t.id} value={t.id}>{t.name}</Select.Option>
               ))}
             </Select>
           </Form.Item>
-          <Form.Item name="width" label="宽度" initialValue={1920}>
+          <Form.Item name="width" label={t('overlay.width')} initialValue={1920}>
             <InputNumber min={200} max={3840} className="w-full" />
           </Form.Item>
-          <Form.Item name="height" label="高度" initialValue={120}>
+          <Form.Item name="height" label={t('overlay.height')} initialValue={120}>
             <InputNumber min={40} max={2160} className="w-full" />
           </Form.Item>
         </Form>

@@ -11,7 +11,7 @@ const translations: Record<Locale, Record<string, string>> = { zh, en };
 interface I18nContextType {
   locale: Locale;
   setLocale: (locale: Locale) => void;
-  t: (key: string, params?: Record<string, string>) => string;
+  t: (key: string, params?: Record<string, string | number>) => string;
 }
 
 const I18nContext = createContext<I18nContextType>({
@@ -47,11 +47,11 @@ export function I18nProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   const t = useCallback(
-    (key: string, params?: Record<string, string>): string => {
+    (key: string, params?: Record<string, string | number>): string => {
       let text = translations[locale]?.[key] || translations[defaultLocale]?.[key] || key;
       if (params) {
         Object.entries(params).forEach(([k, v]) => {
-          text = text.replace(new RegExp(`\\{${k}\\}`, 'g'), v);
+          text = text.replace(new RegExp(`\\{${k}\\}`, 'g'), String(v));
         });
       }
       return text;

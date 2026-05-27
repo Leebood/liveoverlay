@@ -6,6 +6,7 @@ import { Card, Row, Col, Tag, Button, Typography, Space, Tabs, Modal, Descriptio
 import { CheckOutlined, LockOutlined, InfoCircleOutlined, EyeOutlined } from '@ant-design/icons';
 import { useSession } from 'next-auth/react';
 import { isTemplateAllowed } from '@/lib/plan-limits';
+import { useI18n } from '@/i18n';
 import type { PlanType } from '@/types/plan';
 import type { TemplateDefinition } from '@/types/template';
 
@@ -679,6 +680,7 @@ function TemplatePreview({ template }: { template: TemplateDefinition }) {
 
 /* ── 页面主体 ── */
 export default function TemplatesPage() {
+  const { t } = useI18n();
   const { data: session } = useSession();
   const planType = ((session?.user as Record<string, unknown>)?.planType || 'free') as PlanType;
   const [templates, setTemplates] = useState<TemplateDefinition[]>([]);
@@ -699,7 +701,7 @@ export default function TemplatesPage() {
       <div className="flex justify-between items-center mb-6">
         <div>
           <Title level={3} className="!mb-1">模板选择</Title>
-          <Paragraph type="secondary">选择适合你直播风格的Overlay模板，共 {templates.length} 种</Paragraph>
+          <Paragraph type="secondary">{t('templates.subtitle')} {templates.length} {t('templates.countUnit')}</Paragraph>
         </div>
       </div>
 
@@ -723,7 +725,7 @@ export default function TemplatesPage() {
                 styles={{ body: { padding: 12 } }}
                 cover={<TemplatePreview template={template} />}
                 actions={[
-                  <Button type="link" icon={<InfoCircleOutlined />} key="info" onClick={() => setDetailTemplate(template)}>详情</Button>,
+                  <Button type="link" icon={<InfoCircleOutlined />} key="info" onClick={() => setDetailTemplate(template)}>{t('templates.detail')}</Button>,
                   allowed ? (
                     <Button type="link" icon={<CheckOutlined />} key="select">选择</Button>
                   ) : (
@@ -759,9 +761,9 @@ export default function TemplatesPage() {
               <TemplatePreview template={detailTemplate} />
             </div>
             <Descriptions column={2} size="small">
-              <Descriptions.Item label="分类">{CATEGORY_LABELS[detailTemplate.category] || detailTemplate.category}</Descriptions.Item>
-              <Descriptions.Item label="最低计划"><Tag color={PLAN_TAG_COLORS[detailTemplate.minPlan]}>{detailTemplate.minPlan.toUpperCase()}</Tag></Descriptions.Item>
-              <Descriptions.Item label="推荐尺寸">{detailTemplate.recommendedSize.width} × {detailTemplate.recommendedSize.height}</Descriptions.Item>
+              <Descriptions.Item label={t('templates.category')}>{CATEGORY_LABELS[detailTemplate.category] || detailTemplate.category}</Descriptions.Item>
+              <Descriptions.Item label={t('templates.minPlan')}><Tag color={PLAN_TAG_COLORS[detailTemplate.minPlan]}>{detailTemplate.minPlan.toUpperCase()}</Tag></Descriptions.Item>
+              <Descriptions.Item label={t('templates.recommendedSize')}>{detailTemplate.recommendedSize.width} × {detailTemplate.recommendedSize.height}</Descriptions.Item>
               <Descriptions.Item label="支持方向">{detailTemplate.supportedOrientations.map(o => o === 'horizontal' ? '水平' : '垂直').join(' / ')}</Descriptions.Item>
               <Descriptions.Item label="说明" span={2}>{detailTemplate.description}</Descriptions.Item>
             </Descriptions>
