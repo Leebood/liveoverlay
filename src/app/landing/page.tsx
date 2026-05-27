@@ -1,122 +1,260 @@
-// src/app/landing/page.tsx
 'use client';
 
-import { Button, Typography, Row, Col, Space } from 'antd';
+import { useState, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
+import { useSession } from 'next-auth/react';
+import { Button, Typography, Space, Row, Col, Card } from 'antd';
 import {
-  VideoCameraOutlined,
-  AppstoreOutlined,
+  PlayCircleOutlined,
   ThunderboltOutlined,
+  LayoutOutlined,
+  FacebookOutlined,
+  RocketOutlined,
+  CheckCircleOutlined,
   GlobalOutlined,
 } from '@ant-design/icons';
-import Link from 'next/link';
-import { useSession } from 'next-auth/react';
+import { useI18n } from '@/i18n';
+import LanguageSwitcher from '@/components/common/LanguageSwitcher';
 
-const { Title, Paragraph } = Typography;
+const { Title, Paragraph, Text } = Typography;
 
 export default function LandingPage() {
-  const { data: session } = useSession();
+  const { data: session, status } = useSession();
+  const router = useRouter();
+  const { t } = useI18n();
+  const [mounted, setMounted] = useState(false);
 
-  const ctaHref = session ? '/' : '/register';
-  const ctaText = session ? '进入控制台' : '免费开始';
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
+  if (!mounted) return null;
+
+  const isLoggedIn = status === 'authenticated';
+
+  const features = [
+    {
+      icon: <LayoutOutlined style={{ fontSize: 36, color: '#1677FF' }} />,
+      title: t('landing.features.template.title'),
+      desc: t('landing.features.template.desc'),
+    },
+    {
+      icon: <ThunderboltOutlined style={{ fontSize: 36, color: '#FF4D4F' }} />,
+      title: t('landing.features.realtime.title'),
+      desc: t('landing.features.realtime.desc'),
+    },
+    {
+      icon: <PlayCircleOutlined style={{ fontSize: 36, color: '#52C41A' }} />,
+      title: t('landing.features.obs.title'),
+      desc: t('landing.features.obs.desc'),
+    },
+    {
+      icon: <FacebookOutlined style={{ fontSize: 36, color: '#1677FF' }} />,
+      title: t('landing.features.facebook.title'),
+      desc: t('landing.features.facebook.desc'),
+    },
+  ];
+
+  const steps = [
+    t('landing.steps.1'),
+    t('landing.steps.2'),
+    t('landing.steps.3'),
+    t('landing.steps.4'),
+    t('landing.steps.5'),
+  ];
 
   return (
-    <div className="min-h-screen">
-      {/* Hero Section */}
-      <section className="bg-gradient-to-br from-indigo-600 to-purple-700 text-white py-24 px-4">
-        <div className="max-w-5xl mx-auto text-center">
-          <Title level={1} className="!text-white !text-5xl !mb-4">
-            LiveOverlay
-          </Title>
-          <Paragraph className="!text-white/80 text-xl mb-8 max-w-2xl mx-auto">
-            让你的Facebook直播间看起来像淘宝直播间——OBS浏览器源一键嵌入，实时展示滚动商品条、主推商品卡、促销角标。
-          </Paragraph>
-          <Space size="large">
-            <Link href={ctaHref}>
-              <Button type="primary" size="large" className="!bg-white !text-indigo-600 !font-semibold h-12 px-8">
-                {ctaText}
-              </Button>
-            </Link>
-            <Link href="/pricing">
-              <Button size="large" ghost className="!text-white !border-white/50 h-12 px-8">
-                查看定价
-              </Button>
-            </Link>
-          </Space>
+    <div style={{ minHeight: '100vh', background: '#fff' }}>
+      {/* Header */}
+      <div
+        style={{
+          display: 'flex',
+          justifyContent: 'space-between',
+          alignItems: 'center',
+          padding: '16px 48px',
+          borderBottom: '1px solid #f0f0f0',
+        }}
+      >
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+          <PlayCircleOutlined style={{ fontSize: 28, color: '#1677FF' }} />
+          <Text strong style={{ fontSize: 20 }}>LiveOverlay</Text>
         </div>
-      </section>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+          <LanguageSwitcher />
+          {isLoggedIn ? (
+            <Button type="primary" onClick={() => router.push('/dashboard')}>
+              {t('landing.hero.ctaDashboard')}
+            </Button>
+          ) : (
+            <>
+              <Button onClick={() => router.push('/login')}>{t('login.submit')}</Button>
+              <Button type="primary" onClick={() => router.push('/register')}>
+                {t('register.submit')}
+              </Button>
+            </>
+          )}
+        </div>
+      </div>
+
+      {/* Hero Section */}
+      <div
+        style={{
+          textAlign: 'center',
+          padding: '80px 48px 60px',
+          background: 'linear-gradient(135deg, #e6f4ff 0%, #f0f5ff 50%, #fff7e6 100%)',
+        }}
+      >
+        <Title level={1} style={{ marginBottom: 16, fontSize: 42 }}>
+          LiveOverlay
+        </Title>
+        <Paragraph
+          style={{ fontSize: 18, color: '#666', maxWidth: 640, margin: '0 auto 32px' }}
+        >
+          {t('landing.hero.subtitle')}
+        </Paragraph>
+        <Space size="middle">
+          {isLoggedIn ? (
+            <Button
+              type="primary"
+              size="large"
+              icon={<RocketOutlined />}
+              onClick={() => router.push('/dashboard')}
+            >
+              {t('landing.hero.ctaDashboard')}
+            </Button>
+          ) : (
+            <>
+              <Button
+                type="primary"
+                size="large"
+                icon={<RocketOutlined />}
+                onClick={() => router.push('/register')}
+              >
+                {t('landing.hero.ctaStart')}
+              </Button>
+              <Button size="large" onClick={() => router.push('/pricing')}>
+                {t('landing.hero.pricing')}
+              </Button>
+            </>
+          )}
+        </Space>
+      </div>
 
       {/* Features */}
-      <section className="py-20 px-4 bg-white">
-        <div className="max-w-5xl mx-auto">
-          <Title level={2} className="text-center mb-12">核心功能</Title>
-          <Row gutter={[32, 32]}>
-            <Col xs={24} md={6}>
-              <div className="text-center">
-                <div className="w-16 h-16 bg-indigo-100 rounded-2xl flex items-center justify-center mx-auto mb-4">
-                  <AppstoreOutlined className="text-2xl text-indigo-600" />
-                </div>
-                <Title level={4}>模板系统</Title>
-                <Paragraph type="secondary">10+精美模板，涵盖滚动条、商品卡、角标、倒计时等组件</Paragraph>
-              </div>
+      <div style={{ padding: '60px 48px', maxWidth: 1200, margin: '0 auto' }}>
+        <Title level={2} style={{ textAlign: 'center', marginBottom: 48 }}>
+          {t('landing.features.title')}
+        </Title>
+        <Row gutter={[24, 24]}>
+          {features.map((feature, idx) => (
+            <Col xs={24} sm={12} key={idx}>
+              <Card
+                hoverable
+                style={{ height: '100%', textAlign: 'center', padding: '20px 16px' }}
+              >
+                <div style={{ marginBottom: 16 }}>{feature.icon}</div>
+                <Title level={4}>{feature.title}</Title>
+                <Paragraph style={{ color: '#888' }}>{feature.desc}</Paragraph>
+              </Card>
             </Col>
-            <Col xs={24} md={6}>
-              <div className="text-center">
-                <div className="w-16 h-16 bg-indigo-100 rounded-2xl flex items-center justify-center mx-auto mb-4">
-                  <ThunderboltOutlined className="text-2xl text-indigo-600" />
-                </div>
-                <Title level={4}>实时控制</Title>
-                <Paragraph type="secondary">直播中实时切换主推商品、显示隐藏、倒计时、闪购等</Paragraph>
-              </div>
-            </Col>
-            <Col xs={24} md={6}>
-              <div className="text-center">
-                <div className="w-16 h-16 bg-indigo-100 rounded-2xl flex items-center justify-center mx-auto mb-4">
-                  <VideoCameraOutlined className="text-2xl text-indigo-600" />
-                </div>
-                <Title level={4}>OBS一键嵌入</Title>
-                <Paragraph type="secondary">浏览器源加载，零配置即插即用，极轻量渲染引擎</Paragraph>
-              </div>
-            </Col>
-            <Col xs={24} md={6}>
-              <div className="text-center">
-                <div className="w-16 h-16 bg-indigo-100 rounded-2xl flex items-center justify-center mx-auto mb-4">
-                  <GlobalOutlined className="text-2xl text-indigo-600" />
-                </div>
-                <Title level={4}>Facebook直播</Title>
-                <Paragraph type="secondary">专为Facebook直播优化，完美适配各类直播场景</Paragraph>
-              </div>
-            </Col>
-          </Row>
-        </div>
-      </section>
+          ))}
+        </Row>
+      </div>
 
-      {/* How it works */}
-      <section className="py-20 px-4 bg-gray-50">
-        <div className="max-w-4xl mx-auto text-center">
-          <Title level={2} className="mb-12">使用流程</Title>
-          <Row gutter={[24, 24]}>
-            {['注册账号', '录入商品', '选择模板', 'OBS添加浏览器源', '开播'].map((step, i) => (
-              <Col xs={12} md={4} key={i}>
-                <div className="w-12 h-12 bg-indigo-600 text-white rounded-full flex items-center justify-center mx-auto mb-3 text-lg font-bold">
-                  {i + 1}
-                </div>
-                <Paragraph className="font-medium">{step}</Paragraph>
-              </Col>
-            ))}
-          </Row>
+      {/* Steps */}
+      <div
+        style={{
+          padding: '60px 48px',
+          background: '#fafafa',
+          textAlign: 'center',
+        }}
+      >
+        <Title level={2} style={{ marginBottom: 48 }}>
+          {t('landing.steps.title')}
+        </Title>
+        <div
+          style={{
+            display: 'flex',
+            justifyContent: 'center',
+            alignItems: 'center',
+            flexWrap: 'wrap',
+            gap: 12,
+            maxWidth: 800,
+            margin: '0 auto',
+          }}
+        >
+          {steps.map((step, idx) => (
+            <div key={idx} style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+              <div
+                style={{
+                  width: 48,
+                  height: 48,
+                  borderRadius: '50%',
+                  background: '#1677FF',
+                  color: '#fff',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  fontSize: 20,
+                  fontWeight: 600,
+                  flexShrink: 0,
+                }}
+              >
+                {idx + 1}
+              </div>
+              <Text style={{ fontSize: 16 }}>{step}</Text>
+              {idx < steps.length - 1 && (
+                <div
+                  style={{
+                    width: 40,
+                    height: 2,
+                    background: '#d9d9d9',
+                    flexShrink: 0,
+                  }}
+                />
+              )}
+            </div>
+          ))}
         </div>
-      </section>
+      </div>
 
       {/* CTA */}
-      <section className="py-16 px-4 bg-indigo-600 text-white text-center">
-        <Title level={2} className="!text-white !mb-4">准备好提升你的直播体验了吗？</Title>
-        <Paragraph className="!text-white/80 mb-8">免费开始，无需信用卡</Paragraph>
-        <Link href={ctaHref}>
-          <Button type="primary" size="large" className="!bg-white !text-indigo-600 !font-semibold h-12 px-8">
-            {session ? '进入控制台' : '立即开始'}
-          </Button>
-        </Link>
-      </section>
+      <div
+        style={{
+          textAlign: 'center',
+          padding: '80px 48px',
+          background: 'linear-gradient(135deg, #1677FF 0%, #4096ff 100%)',
+          color: '#fff',
+        }}
+      >
+        <Title level={2} style={{ color: '#fff', marginBottom: 12 }}>
+          {t('landing.cta.title')}
+        </Title>
+        <Paragraph style={{ color: 'rgba(255,255,255,0.85)', fontSize: 16, marginBottom: 32 }}>
+          {t('landing.cta.subtitle')}
+        </Paragraph>
+        <Button
+          size="large"
+          ghost
+          style={{ color: '#fff', borderColor: '#fff' }}
+          onClick={() => router.push(isLoggedIn ? '/dashboard' : '/register')}
+        >
+          {t('landing.cta.button')}
+        </Button>
+      </div>
+
+      {/* Footer */}
+      <div
+        style={{
+          textAlign: 'center',
+          padding: '24px 48px',
+          color: '#999',
+          fontSize: 13,
+          borderTop: '1px solid #f0f0f0',
+        }}
+      >
+        © {new Date().getFullYear()} LiveOverlay. All rights reserved.
+      </div>
     </div>
   );
 }

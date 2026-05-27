@@ -6,24 +6,24 @@ import { I18nProvider } from '@/i18n';
 
 export const metadata: Metadata = {
   title: {
-    default: 'LiveOverlay | Facebook直播商品贴片插件',
+    default: 'LiveOverlay | Facebook Live Shopping Overlay Plugin',
     template: '%s | LiveOverlay',
   },
   description:
-    '让你的Facebook直播间看起来像淘宝直播间——OBS浏览器源一键嵌入，实时展示滚动商品条、主推商品卡、促销角标。',
+    'Make your Facebook Live stream look like a pro shopping channel — OBS browser source overlay for product tickers, spotlight cards, promo badges and more.',
   keywords: [
     'LiveOverlay',
     'Facebook Live',
-    '直播贴片',
+    'Live Shopping Overlay',
     'OBS',
-    '商品展示',
-    '直播带货',
-    '直播插件',
+    'Product Display',
+    'Live Streaming',
+    'Live Commerce Plugin',
   ],
   authors: [{ name: 'LiveOverlay' }],
   openGraph: {
-    title: 'LiveOverlay | Facebook直播商品贴片插件',
-    description: '让你的Facebook直播间看起来像淘宝直播间',
+    title: 'LiveOverlay | Facebook Live Shopping Overlay Plugin',
+    description: 'Professional live shopping overlays for Facebook Live streams',
     type: 'website',
   },
 };

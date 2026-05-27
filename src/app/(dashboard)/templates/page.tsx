@@ -727,9 +727,9 @@ export default function TemplatesPage() {
                 actions={[
                   <Button type="link" icon={<InfoCircleOutlined />} key="info" onClick={() => setDetailTemplate(template)}>{t('templates.detail')}</Button>,
                   allowed ? (
-                    <Button type="link" icon={<CheckOutlined />} key="select">选择</Button>
+                    <Button type="link" icon={<CheckOutlined />} key="select">{t('templates.select')}</Button>
                   ) : (
-                    <Button type="link" icon={<LockOutlined />} disabled key="locked">需升级</Button>
+                    <Button type="link" icon={<LockOutlined />} disabled key="locked">{t('templates.upgradeRequired')}</Button>
                   ),
                 ]}
               >
@@ -764,8 +764,8 @@ export default function TemplatesPage() {
               <Descriptions.Item label={t('templates.category')}>{CATEGORY_LABELS[detailTemplate.category] || detailTemplate.category}</Descriptions.Item>
               <Descriptions.Item label={t('templates.minPlan')}><Tag color={PLAN_TAG_COLORS[detailTemplate.minPlan]}>{detailTemplate.minPlan.toUpperCase()}</Tag></Descriptions.Item>
               <Descriptions.Item label={t('templates.recommendedSize')}>{detailTemplate.recommendedSize.width} × {detailTemplate.recommendedSize.height}</Descriptions.Item>
-              <Descriptions.Item label="支持方向">{detailTemplate.supportedOrientations.map(o => o === 'horizontal' ? '水平' : '垂直').join(' / ')}</Descriptions.Item>
-              <Descriptions.Item label="说明" span={2}>{detailTemplate.description}</Descriptions.Item>
+              <Descriptions.Item label={t('templates.supportedOrientations')}>{detailTemplate.supportedOrientations.map(o => o === 'horizontal' ? t('templates.horizontal') : t('templates.vertical')).join(' / ')}</Descriptions.Item>
+              <Descriptions.Item label={t('templates.description')} span={2}>{detailTemplate.description}</Descriptions.Item>
             </Descriptions>
           </div>
         )}
