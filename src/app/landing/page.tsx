@@ -21,7 +21,7 @@ const { Title, Paragraph, Text } = Typography;
 export default function LandingPage() {
   const { data: session, status } = useSession();
   const router = useRouter();
-  const { t } = useI18n();
+  const { t, locale } = useI18n();
   const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
@@ -253,7 +253,11 @@ export default function LandingPage() {
           borderTop: '1px solid #f0f0f0',
         }}
       >
-        © {new Date().getFullYear()} LiveOverlay. All rights reserved.
+        <div style={{ marginBottom: 8 }}>
+          <a href="/privacy" style={{ color: '#666', marginRight: 24 }}>{t('landing.privacyPolicy') || (locale === 'zh' ? '隐私政策' : 'Privacy Policy')}</a>
+          <a href="mailto:leo.tikboost@gmail.com" style={{ color: '#666' }}>{t('landing.supportEmail') || (locale === 'zh' ? '技术支持' : 'Support')}: leo.tikboost@gmail.com</a>
+        </div>
+        © {new Date().getFullYear()} LiveOverlay. {locale === 'zh' ? '保留所有权利' : 'All rights reserved'}.
       </div>
     </div>
   );
