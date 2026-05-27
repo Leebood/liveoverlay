@@ -17,6 +17,7 @@ export const authOptions: NextAuthOptions = {
       },
       async authorize(credentials) {
         if (!credentials?.email || !credentials?.password) {
+          console.error('[Auth] Missing credentials');
           return null;
         }
 
@@ -29,13 +30,20 @@ export const authOptions: NextAuthOptions = {
             .eq('auth_provider', 'email')
             .maybeSingle();
 
-          if (error || !data) {
+          if (error) {
+            console.error('[Auth] DB query error:', error.message);
+            return null;
+          }
+          
+          if (!data) {
+            console.error('[Auth] No user found for email:', credentials.email);
             return null;
           }
 
           // Verify password (SHA-256 hash; use bcrypt in production)
           const hashedPassword = createHash('sha256').update(credentials.password).digest('hex');
           if (data.auth_provider_id !== hashedPassword) {
+            console.error('[Auth] Password mismatch for:', credentials.email);
             return null;
           }
 
@@ -46,7 +54,8 @@ export const authOptions: NextAuthOptions = {
             image: data.image,
             planType: data.plan_type,
           };
-        } catch {
+        } catch (err) {
+          console.error('[Auth] Exception:', err instanceof Error ? err.message : err);
           return null;
         }
       },

@@ -5,20 +5,24 @@ import { NextResponse } from 'next/server';
 export async function GET() {
   const checks: Record<string, { status: string; detail?: string }> = {};
 
-  // Check environment variables
+  // Check ALL environment variables
   const envVars = [
     'COZE_SUPABASE_URL',
     'COZE_SUPABASE_ANON_KEY',
     'COZE_SUPABASE_SERVICE_ROLE_KEY',
+    'NEXT_PUBLIC_SUPABASE_URL',
+    'NEXT_PUBLIC_SUPABASE_ANON_KEY',
+    'SUPABASE_SERVICE_ROLE_KEY',
     'NEXTAUTH_URL',
     'NEXTAUTH_SECRET',
+    'NEXT_PUBLIC_APP_URL',
   ];
 
   for (const v of envVars) {
     const val = process.env[v];
     checks[v] = {
       status: val ? 'SET' : 'MISSING',
-      detail: val ? `${val.substring(0, 10)}...` : undefined,
+      detail: val ? `${val.substring(0, 15)}...` : undefined,
     };
   }
 
@@ -33,6 +37,26 @@ export async function GET() {
     };
   } catch (err) {
     checks['supabase_connection'] = {
+      status: 'FAILED',
+      detail: err instanceof Error ? err.message : 'Unknown error',
+    };
+  }
+
+  // Test register endpoint
+  try {
+    const { getSupabaseClient } = await import('@/storage/database/supabase-client');
+    const supabase = getSupabaseClient();
+    // Check if users table exists and has correct columns
+    const { data: tableCheck, error: tableError } = await supabase
+      .from('users')
+      .select('id, email, name, plan, store_id, created_at')
+      .limit(1);
+    checks['users_table'] = {
+      status: tableError ? 'ERROR' : 'OK',
+      detail: tableError ? tableError.message : `${tableCheck?.length ?? 0} users found`,
+    };
+  } catch (err) {
+    checks['users_table'] = {
       status: 'FAILED',
       detail: err instanceof Error ? err.message : 'Unknown error',
     };
