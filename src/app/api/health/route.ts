@@ -42,22 +42,53 @@ export async function GET() {
     };
   }
 
-  // Test register endpoint
+  // Check users table columns (the ones auth actually needs)
+  const requiredColumns = ['id', 'email', 'name', 'plan_type', 'auth_provider_id', 'auth_provider', 'image'];
+  for (const col of requiredColumns) {
+    try {
+      const { getSupabaseClient } = await import('@/storage/database/supabase-client');
+      const supabase = getSupabaseClient();
+      const { error } = await supabase.from('users').select(col).limit(1);
+      checks[`users.${col}`] = {
+        status: error ? 'MISSING' : 'OK',
+        detail: error ? error.message : undefined,
+      };
+    } catch (err) {
+      checks[`users.${col}`] = {
+        status: 'ERROR',
+        detail: err instanceof Error ? err.message : 'Unknown error',
+      };
+    }
+  }
+
+  // Check stores table
   try {
     const { getSupabaseClient } = await import('@/storage/database/supabase-client');
     const supabase = getSupabaseClient();
-    // Check if users table exists and has correct columns
-    const { data: tableCheck, error: tableError } = await supabase
-      .from('users')
-      .select('id, email, name, plan, store_id, created_at')
-      .limit(1);
-    checks['users_table'] = {
-      status: tableError ? 'ERROR' : 'OK',
-      detail: tableError ? tableError.message : `${tableCheck?.length ?? 0} users found`,
+    const { data, error } = await supabase.from('stores').select('id').limit(1);
+    checks['stores_table'] = {
+      status: error ? 'ERROR' : 'OK',
+      detail: error ? error.message : `${data?.length ?? 0} stores`,
     };
   } catch (err) {
-    checks['users_table'] = {
-      status: 'FAILED',
+    checks['stores_table'] = {
+      status: 'ERROR',
+      detail: err instanceof Error ? err.message : 'Unknown error',
+    };
+  }
+
+  // Check products table
+  try {
+    const { getSupabaseClient } = await import('@/storage/database/supabase-client');
+    const supabase = getSupabaseClient();
+    const { data, error } = await supabase.from('products').select('id').limit(1);
+    checks['products_table'] = {
+      status: error ? 'ERROR' : 'OK',
+      detail: error ? error.message : `${data?.length ?? 0} products`,
+    };
+  } catch (err) {
+    checks['products_table'] = {
+      status: 'ERROR',
       detail: err instanceof Error ? err.message : 'Unknown error',
     };
   }
