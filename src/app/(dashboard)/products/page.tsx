@@ -132,17 +132,6 @@ export default function ProductsPage() {
       render: (tag: string | null) => tag ? <Tag color="blue">{tag}</Tag> : '-',
     },
     {
-      title: t('products.buyUrl'),
-      dataIndex: 'buy_url',
-      key: 'buy_url',
-      width: 120,
-      render: (url: string | null) => url ? (
-        <a href={url} target="_blank" rel="noopener noreferrer" className="text-blue-500 hover:text-blue-600 truncate block max-w-[120px]" title={url}>
-          {url.replace(/^https?:\/\/(www\.)?/, '').split('/')[0]}
-        </a>
-      ) : <span className="text-gray-300">{t('products.notSet')}</span>,
-    },
-    {
       title: t('products.status'),
       dataIndex: 'is_active',
       key: 'is_active',
@@ -161,7 +150,6 @@ export default function ProductsPage() {
               originalPrice: record.original_price ? parseFloat(record.original_price) : 0,
               description: record.description || '',
               tag: record.tag || '',
-              buyUrl: record.buy_url || '',
               category: record.category || '',
             });
             setModalOpen(true);
@@ -234,9 +222,6 @@ export default function ProductsPage() {
           </Form.Item>
           <Form.Item name="tag" label={t('products.tag')}>
             <Input placeholder={t('products.tagPlaceholder')} />
-          </Form.Item>
-          <Form.Item name="buyUrl" label={t('products.buyUrl')} tooltip={t('products.buyUrlTooltip')} rules={[{ type: 'url', message: t('products.buyUrlInvalid') }]}>
-            <Input placeholder="https://your-store.com/product/xxx" />
           </Form.Item>
           <Form.Item name="category" label={t('products.category')}>
             <Input placeholder={t('products.categoryPlaceholder')} />

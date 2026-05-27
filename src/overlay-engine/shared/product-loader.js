@@ -19,29 +19,5 @@ var ProductLoader = {
       return c + ' ' + price.toFixed(2);
     }
   },
-  // Generate a clickable element for product purchase
-  createBuyLink: function(product, text) {
-    var url = product.buyUrl || product.buy_url || '';
-    if (!url) return text || '购买';
-    return '<a href="' + url + '" target="_blank" rel="noopener noreferrer" style="color:inherit;text-decoration:none;cursor:pointer;" onclick="window.open(\'' + url + '\',\'_blank\')">' + (text || '购买') + '</a>';
-  },
-  // Check if product has a buy URL
-  hasBuyUrl: function(product) {
-    return !!(product.buyUrl || product.buy_url);
-  },
-  // Get product buy URL
-  getBuyUrl: function(product) {
-    return product.buyUrl || product.buy_url || '';
-  },
-  // Make an entire element clickable
-  makeClickable: function(element, product) {
-    var url = product.buyUrl || product.buy_url || '';
-    if (!url || !element) return;
-    element.style.cursor = 'pointer';
-    element.addEventListener('click', function(e) {
-      e.preventDefault();
-      e.stopPropagation();
-      window.open(url, '_blank');
-    });
-  }
+  // Buy link functionality removed per requirement - overlay is display-only
 };

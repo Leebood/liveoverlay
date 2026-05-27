@@ -1,11 +1,10 @@
 // src/app/api/upload/route.ts
-// File upload using S3-compatible storage (R2 in production, local in dev)
 
 import { NextResponse } from 'next/server';
+import { getSupabaseClient } from '@/storage/database/supabase-client';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 
-// POST /api/upload
 export async function POST(request: Request) {
   try {
     const session = await getServerSession(authOptions);
@@ -15,67 +14,71 @@ export async function POST(request: Request) {
 
     const formData = await request.formData();
     const file = formData.get('file') as File | null;
+    const storeId = formData.get('storeId') as string | null;
 
     if (!file) {
       return NextResponse.json({ error: 'No file provided' }, { status: 400 });
     }
 
-    const bytes = await file.arrayBuffer();
-    const buffer = Buffer.from(bytes);
+    if (!storeId) {
+      return NextResponse.json({ error: 'Missing storeId' }, { status: 400 });
+    }
 
-    const fileName = `upload_${Date.now()}_${file.name.replace(/[^a-zA-Z0-9._-]/g, '_')}`;
+    // Validate file type
+    const allowedTypes = ['image/png', 'image/jpeg', 'image/svg+xml', 'image/webp'];
+    if (!allowedTypes.includes(file.type)) {
+      return NextResponse.json({ error: 'Invalid file type. Only PNG, JPEG, SVG, and WebP are allowed.' }, { status: 400 });
+    }
 
-    // Try R2 upload if configured
-    const r2PublicUrl = process.env.R2_PUBLIC_URL;
-    const r2Bucket = process.env.R2_BUCKET_NAME;
-    const r2AccessKey = process.env.R2_ACCESS_KEY_ID;
-    const r2SecretKey = process.env.R2_SECRET_ACCESS_KEY;
-    const r2Endpoint = process.env.R2_ENDPOINT;
+    // Validate file size (max 2MB)
+    if (file.size > 2 * 1024 * 1024) {
+      return NextResponse.json({ error: 'File too large. Maximum size is 2MB.' }, { status: 400 });
+    }
 
-    if (r2PublicUrl && r2Bucket && r2AccessKey && r2SecretKey && r2Endpoint) {
-      // Upload to Cloudflare R2 using S3-compatible API
-      const { S3Client, PutObjectCommand } = await import('@aws-sdk/client-s3');
+    const supabase = getSupabaseClient();
 
-      const s3 = new S3Client({
-        region: 'auto',
-        endpoint: r2Endpoint,
-        credentials: {
-          accessKeyId: r2AccessKey,
-          secretAccessKey: r2SecretKey,
-        },
+    // Generate unique file path
+    const ext = file.name.split('.').pop() || 'png';
+    const timestamp = Date.now();
+    const randomStr = Math.random().toString(36).substring(2, 8);
+    const filePath = `logos/${storeId}/${timestamp}-${randomStr}.${ext}`;
+
+    // Convert file to ArrayBuffer
+    const arrayBuffer = await file.arrayBuffer();
+    const uint8Array = new Uint8Array(arrayBuffer);
+
+    // Upload to Supabase Storage
+    const { data: uploadData, error: uploadError } = await supabase.storage
+      .from('uploads')
+      .upload(filePath, uint8Array, {
+        contentType: file.type,
+        upsert: true,
       });
 
-      await s3.send(
-        new PutObjectCommand({
-          Bucket: r2Bucket,
-          Key: fileName,
-          Body: buffer,
-          ContentType: file.type || 'application/octet-stream',
-        })
-      );
-
-      const publicUrl = `${r2PublicUrl}/${fileName}`;
-      return NextResponse.json({ url: publicUrl, fileName });
+    if (uploadError) {
+      // If storage bucket doesn't exist, store as base64 in database
+      console.warn('Storage upload failed, storing URL reference:', uploadError.message);
     }
 
-    // Fallback: store in public directory (dev mode)
-    const fs = await import('fs/promises');
-    const path = await import('path');
-    const uploadDir = path.join(process.cwd(), 'public', 'uploads');
-
-    try {
-      await fs.access(uploadDir);
-    } catch {
-      await fs.mkdir(uploadDir, { recursive: true });
+    let url = '';
+    if (uploadData) {
+      const { data: urlData } = supabase.storage.from('uploads').getPublicUrl(filePath);
+      url = urlData.publicUrl;
+    } else {
+      // Fallback: store as data URL (for environments without storage bucket)
+      const base64 = `data:${file.type};base64,${Buffer.from(uint8Array).toString('base64')}`;
+      url = base64;
     }
 
-    const filePath = path.join(uploadDir, fileName);
-    await fs.writeFile(filePath, buffer);
+    // Update store with logo URL
+    await supabase
+      .from('stores')
+      .update({ brand_logo: url })
+      .eq('id', storeId);
 
-    const publicUrl = `/uploads/${fileName}`;
-    return NextResponse.json({ url: publicUrl, fileName });
+    return NextResponse.json({ url, path: filePath });
   } catch (err) {
-    const message = err instanceof Error ? err.message : 'Unknown error';
-    return NextResponse.json({ error: message }, { status: 500 });
+    const msg = err instanceof Error ? err.message : 'Upload failed';
+    return NextResponse.json({ error: msg }, { status: 500 });
   }
 }

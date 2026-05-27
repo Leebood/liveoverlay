@@ -1,8 +1,8 @@
 'use client';
 
 import { useState, useEffect, useRef } from 'react';
-import { Card, Row, Col, Button, Typography, Tag, Space, Divider, Radio, message, Modal, Spin, Result } from 'antd';
-import { CheckOutlined, CrownOutlined, WechatOutlined, AlipayCircleOutlined, LoadingOutlined } from '@ant-design/icons';
+import { Card, Row, Col, Button, Typography, Tag, Space, Divider, Radio, message, Modal, Spin, Result, Tooltip } from 'antd';
+import { CheckOutlined, CrownOutlined, WechatOutlined, AlipayCircleOutlined, LoadingOutlined, CloseOutlined } from '@ant-design/icons';
 import { useSession } from 'next-auth/react';
 import { getPlanLimits } from '@/lib/plan-limits';
 import PlanBadge from '@/components/common/PlanBadge';
@@ -14,6 +14,14 @@ const { Title, Paragraph, Text } = Typography;
 const PLAN_ORDER: PlanType[] = ['free', 'starter', 'pro', 'business'];
 
 type PaymentMethod = 'wechat' | 'alipay';
+
+interface PlanFeature {
+  key: string;
+  free: string | boolean;
+  starter: string | boolean;
+  pro: string | boolean;
+  business: string | boolean;
+}
 
 export default function BillingPage() {
   const { t } = useI18n();
@@ -113,6 +121,33 @@ export default function BillingPage() {
   };
   const getYearlyTotal = (plan: PlanType) => getPlanLimits(plan).yearlyPriceCNY;
 
+  // Plan features comparison table data
+  const planFeatures: PlanFeature[] = [
+    { key: 'products', free: '3', starter: '20', pro: t('common.unlimited'), business: t('common.unlimited') },
+    { key: 'images', free: '1', starter: '3', pro: '5', business: '10' },
+    { key: 'templates', free: '1', starter: '3', pro: t('billing.all'), business: t('billing.all') },
+    { key: 'overlays', free: '1', starter: '1', pro: '3', business: t('common.unlimited') },
+    { key: 'stores', free: '1', starter: '1', pro: '3', business: '10' },
+    { key: 'csvImport', free: false, starter: true, pro: true, business: true },
+    { key: 'liveControl', free: false, starter: true, pro: true, business: true },
+    { key: 'livePreview', free: false, starter: true, pro: true, business: true },
+    { key: 'customColors', free: false, starter: true, pro: true, business: true },
+    { key: 'customFonts', free: false, starter: false, pro: true, business: true },
+    { key: 'brandLogo', free: false, starter: false, pro: true, business: true },
+    { key: 'clickTracking', free: false, starter: false, pro: true, business: true },
+    { key: 'advancedAnalytics', free: false, starter: false, pro: false, business: true },
+    { key: 'apiAccess', free: false, starter: false, pro: false, business: true },
+    { key: 'whiteLabel', free: false, starter: false, pro: false, business: true },
+    { key: 'teamMembers', free: '1', starter: '1', pro: '2', business: '5' },
+    { key: 'watermark', free: true, starter: false, pro: false, business: false },
+  ];
+
+  const renderFeatureValue = (value: string | boolean) => {
+    if (value === true) return <CheckOutlined className="text-green-500" />;
+    if (value === false) return <CloseOutlined className="text-gray-300" />;
+    return <span>{value}</span>;
+  };
+
   return (
     <div>
       <div className="flex justify-between items-center mb-4">
@@ -143,7 +178,8 @@ export default function BillingPage() {
         </div>
       </Card>
 
-      <Row gutter={[16, 16]}>
+      {/* Plan Cards */}
+      <Row gutter={[16, 16]} className="mb-8">
         {PLAN_ORDER.map(plan => {
           const limits = getPlanLimits(plan);
           const isCurrent = plan === planType;
@@ -170,8 +206,8 @@ export default function BillingPage() {
                   <div><CheckOutlined className="text-green-500 mr-2" />{limits.maxSimultaneousOverlays === -1 ? t('billing.unlimited') : limits.maxSimultaneousOverlays}{t('billing.overlaysUnit')}</div>
                   <div><CheckOutlined className="text-green-500 mr-2" />{limits.maxStores}{t('billing.storesUnit')}</div>
                   {limits.allowLiveControl && <div><CheckOutlined className="text-green-500 mr-2" />{t('billing.liveControl')}</div>}
-                  {limits.showWatermark && <div><Tag color="orange">{t('billing.hasWatermark')}</Tag></div>}
                   {!limits.showWatermark && <div><CheckOutlined className="text-green-500 mr-2" />{t('billing.noWatermark')}</div>}
+                  {limits.showWatermark && <div><Tag color="orange">{t('billing.hasWatermark')}</Tag></div>}
                 </div>
                 {isCurrent ? (
                   <Button block disabled>{t('billing.currentPlanBtn')}</Button>
@@ -185,6 +221,36 @@ export default function BillingPage() {
           );
         })}
       </Row>
+
+      {/* Feature Comparison Table */}
+      <Card>
+        <Title level={4} className="!mb-4">{t('billing.featureComparison')}</Title>
+        <div className="overflow-x-auto">
+          <table className="w-full text-sm">
+            <thead>
+              <tr className="border-b">
+                <th className="text-left py-3 px-3 font-medium text-gray-600">{t('billing.feature')}</th>
+                {PLAN_ORDER.map(plan => (
+                  <th key={plan} className="text-center py-3 px-3 font-medium">
+                    <PlanBadge planType={plan} />
+                  </th>
+                ))}
+              </tr>
+            </thead>
+            <tbody>
+              {planFeatures.map((feat, idx) => (
+                <tr key={feat.key} className={idx % 2 === 0 ? 'bg-gray-50' : ''}>
+                  <td className="py-2.5 px-3 text-gray-700">{t(`billing.feature_${feat.key}`)}</td>
+                  <td className="text-center py-2.5 px-3">{renderFeatureValue(feat.free)}</td>
+                  <td className="text-center py-2.5 px-3">{renderFeatureValue(feat.starter)}</td>
+                  <td className="text-center py-2.5 px-3">{renderFeatureValue(feat.pro)}</td>
+                  <td className="text-center py-2.5 px-3">{renderFeatureValue(feat.business)}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </Card>
 
       <Modal open={payModalVisible} onCancel={() => { setPayModalVisible(false); if (pollingRef.current) clearInterval(pollingRef.current); }} footer={null} width={420} centered title={null} closable={payStatus !== 'paid'}>
         {payStatus === 'paid' ? (

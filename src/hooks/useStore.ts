@@ -48,6 +48,8 @@ export function useStore() {
     currentStore,
     storeId: currentStore?.id || '',
     loading,
+    storeName: currentStore?.name || '',
     refreshStores: fetchStores,
+    refreshStore: fetchStores,
   };
 }

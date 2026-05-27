@@ -15,7 +15,7 @@ import {
   UserOutlined,
   LogoutOutlined,
   BookOutlined,
-  ExperimentOutlined,
+  CrownOutlined,
 } from '@ant-design/icons';
 import { useSession, signOut } from 'next-auth/react';
 import { useRouter, usePathname } from 'next/navigation';
@@ -43,9 +43,8 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
     { key: '/live', icon: <VideoCameraOutlined />, label: t('nav.live') },
     { key: '/analytics', icon: <BarChartOutlined />, label: t('nav.analytics') },
     { key: '/settings', icon: <SettingOutlined />, label: t('nav.settings') },
-    { key: '/billing', icon: <CreditCardOutlined />, label: t('nav.billing') },
+    { key: '/billing', icon: <CrownOutlined />, label: t('nav.subscription') },
     { key: '/guide', icon: <BookOutlined />, label: t('nav.guide') },
-    { key: '/test-plan', icon: <ExperimentOutlined />, label: t('nav.testPlan') },
   ];
 
   const handleMenuClick = (info: { key: string }) => {
@@ -56,7 +55,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
     {
       key: 'billing',
       icon: <CreditCardOutlined />,
-      label: t('nav.billing'),
+      label: t('nav.subscription'),
       onClick: () => router.push('/billing'),
     },
     {
