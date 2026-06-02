@@ -2,7 +2,8 @@
 
 import { useState, useEffect, useRef } from 'react';
 import { Card, Row, Col, Button, Typography, Tag, Space, Divider, Radio, message, Modal, Spin, Result, Tooltip } from 'antd';
-import { CheckOutlined, CrownOutlined, WechatOutlined, AlipayCircleOutlined, LoadingOutlined, CloseOutlined } from '@ant-design/icons';
+import { CheckOutlined, CrownOutlined, WechatOutlined, AlipayCircleOutlined, LoadingOutlined, CloseOutlined, CreditCardOutlined } from '@ant-design/icons';
+const PayPalOutlined = CreditCardOutlined;
 import { useSession } from 'next-auth/react';
 import { getPlanLimits } from '@/lib/plan-limits';
 import PlanBadge from '@/components/common/PlanBadge';
@@ -13,7 +14,7 @@ const { Title, Paragraph, Text } = Typography;
 
 const PLAN_ORDER: PlanType[] = ['free', 'starter', 'pro', 'business'];
 
-type PaymentMethod = 'wechat' | 'alipay';
+type PaymentMethod = 'wechat' | 'alipay' | 'paypal';
 
 interface PlanFeature {
   key: string;
@@ -30,6 +31,8 @@ export default function BillingPage() {
   const [billingPeriod, setBillingPeriod] = useState<'monthly' | 'yearly'>('monthly');
   const [checkoutLoading, setCheckoutLoading] = useState<string | null>(null);
   const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>('wechat');
+  const [paypalOrderId, setPaypalOrderId] = useState('');
+  const [paypalApproveUrl, setPaypalApproveUrl] = useState('');
 
   const [payModalVisible, setPayModalVisible] = useState(false);
   const [qrCodeUrl, setQrCodeUrl] = useState('');
@@ -37,6 +40,7 @@ export default function BillingPage() {
   const [currentChannel, setCurrentChannel] = useState<PaymentMethod>('wechat');
   const [currentAmount, setCurrentAmount] = useState('');
   const [payStatus, setPayStatus] = useState<'scanning' | 'paid' | 'expired'>('scanning');
+  const [paypalChecking, setPaypalChecking] = useState(false);
   const pollingRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   useEffect(() => {
@@ -78,6 +82,11 @@ export default function BillingPage() {
         setCurrentAmount(data.amount);
         setPayStatus('scanning');
         setPayModalVisible(true);
+      } else if (data.paypalOrderId) {
+        setPaypalOrderId(data.paypalOrderId);
+        setPaypalApproveUrl(data.approveUrl || '');
+        setPayStatus('scanning');
+        setPayModalVisible(true);
       } else if (data.url) {
         window.location.href = data.url;
       } else {
@@ -87,6 +96,31 @@ export default function BillingPage() {
       message.error(t('billing.networkError'));
     } finally {
       setCheckoutLoading(null);
+    }
+  };
+
+  const checkPayStatus = async () => {
+    if (!paypalOrderId) return;
+    setPaypalChecking(true);
+    try {
+      const res = await fetch('/api/billing/paypal-capture', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ orderId: paypalOrderId, planType: checkoutLoading }),
+      });
+      const data = await res.json();
+      if (data.success) {
+        setPayStatus('paid');
+        message.success(t('billing.paySuccess'));
+        await updateSession();
+        setTimeout(() => { setPayModalVisible(false); window.location.reload(); }, 1500);
+      } else {
+        message.error(data.error || t('billing.paypalCaptureFailed'));
+      }
+    } catch {
+      message.error(t('billing.networkError'));
+    } finally {
+      setPaypalChecking(false);
     }
   };
 
@@ -174,6 +208,9 @@ export default function BillingPage() {
             <Radio.Button value="alipay">
               <AlipayCircleOutlined style={{ color: '#1677FF', fontSize: 20, marginRight: 8, verticalAlign: 'middle' }} />{t('billing.alipay')}
             </Radio.Button>
+            <Radio.Button value="paypal">
+              <PayPalOutlined style={{ color: '#003087', fontSize: 20, marginRight: 8, verticalAlign: 'middle' }} />PayPal / Visa
+            </Radio.Button>
           </Radio.Group>
         </div>
       </Card>
@@ -255,6 +292,24 @@ export default function BillingPage() {
       <Modal open={payModalVisible} onCancel={() => { setPayModalVisible(false); if (pollingRef.current) clearInterval(pollingRef.current); }} footer={null} width={420} centered title={null} closable={payStatus !== 'paid'}>
         {payStatus === 'paid' ? (
           <Result status="success" title={t('billing.paySuccess')} subTitle={t('billing.planUpgraded')} icon={<CheckOutlined style={{ color: '#52C41A' }} />} />
+        ) : paymentMethod === 'paypal' ? (
+          <div className="text-center py-4">
+            <div className="mb-4">
+              <Title level={4}><PayPalOutlined style={{ color: '#003087', marginRight: 8 }} />PayPal / Visa</Title>
+              <Text type="secondary">{t('billing.paypalApproveHint')}</Text>
+            </div>
+            {paypalApproveUrl ? (
+              <a href={paypalApproveUrl} target="_blank" rel="noopener noreferrer">
+                <Button type="primary" size="large" icon={<PayPalOutlined />} style={{ backgroundColor: '#0070ba', borderColor: '#0070ba' }}>
+                  {t('billing.goToPaypal')}
+                </Button>
+              </a>
+            ) : (
+              <div className="w-[200px] h-[60px] flex items-center justify-center mx-auto"><Spin indicator={<LoadingOutlined style={{ fontSize: 32 }} />} /></div>
+            )}
+            <p style={{ marginTop: 16, color: '#8c8c8c', fontSize: 13 }}>{t('billing.paypalReturnHint')}</p>
+            <Button style={{ marginTop: 12 }} onClick={checkPayStatus} loading={paypalChecking}>{t('billing.checkPayStatus')}</Button>
+          </div>
         ) : (
           <div className="text-center py-4">
             <div className="mb-4">

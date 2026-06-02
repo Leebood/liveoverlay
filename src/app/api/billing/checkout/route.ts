@@ -2,6 +2,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createNativeOrder, isWechatPayEnabled } from '@/lib/wechat-pay';
 import { createPrecreateOrder, createPagePayOrder, isAlipayEnabled } from '@/lib/alipay';
+import { createPaypalOrder, isPaypalEnabled } from '@/lib/paypal';
 import { getPlanLimits } from '@/lib/plan-limits';
 import { getSupabaseClient } from '@/storage/database/supabase-client';
 import type { PlanType } from '@/types/plan';
@@ -18,26 +19,23 @@ export async function POST(request: NextRequest) {
     const body = await request.json() as {
       planType: PlanType;
       billingPeriod: 'monthly' | 'yearly';
-      paymentMethod: 'wechat' | 'alipay';
+      paymentMethod: 'wechat' | 'alipay' | 'paypal';
     };
 
     const { planType, billingPeriod, paymentMethod } = body;
     const limits = getPlanLimits(planType);
 
     if (limits.price === 0) {
-      return NextResponse.json({ error: '免费计划无需支付' }, { status: 400 });
+      return NextResponse.json({ error: 'Free plan requires no payment' }, { status: 400 });
     }
-
-    // 计算金额
-    const amount = billingPeriod === 'yearly' ? limits.yearlyPriceCNY : limits.priceCNY;
-    const description = `LiveOverlay ${limits.displayName} - ${billingPeriod === 'yearly' ? '年付' : '月付'}`;
 
     // 检查支付方式是否可用
     const wechatEnabled = isWechatPayEnabled();
     const alipayEnabled = isAlipayEnabled();
+    const paypalEnabled = isPaypalEnabled();
 
-    // 如果两者都未配置，进入演示模式
-    if (!wechatEnabled && !alipayEnabled) {
+    // 如果三者都未配置，进入演示模式
+    if (!wechatEnabled && !alipayEnabled && !paypalEnabled) {
       const supabase = getSupabaseClient();
       await supabase
         .from('subscriptions')
@@ -54,19 +52,30 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({
         demo: true,
         planType,
-        message: '演示模式：支付未配置，计划已直接切换',
+        message: 'Demo mode: payment not configured, plan switched directly',
       });
     }
 
     // 检查选择的支付方式是否已启用
     if (paymentMethod === 'wechat' && !wechatEnabled) {
-      return NextResponse.json({ error: '微信支付未配置，请使用支付宝或联系管理员' }, { status: 400 });
+      return NextResponse.json({ error: 'WeChat Pay not configured' }, { status: 400 });
     }
     if (paymentMethod === 'alipay' && !alipayEnabled) {
-      return NextResponse.json({ error: '支付宝未配置，请使用微信支付或联系管理员' }, { status: 400 });
+      return NextResponse.json({ error: 'Alipay not configured' }, { status: 400 });
+    }
+    if (paymentMethod === 'paypal' && !paypalEnabled) {
+      return NextResponse.json({ error: 'PayPal not configured' }, { status: 400 });
     }
 
     const orderId = generateOrderId();
+
+    // PayPal 使用 USD，微信/支付宝使用 CNY
+    const isPaypal = paymentMethod === 'paypal';
+    const amount = isPaypal
+      ? (billingPeriod === 'yearly' ? limits.yearlyPrice : limits.price)
+      : (billingPeriod === 'yearly' ? limits.yearlyPriceCNY : limits.priceCNY);
+    const currency = isPaypal ? 'USD' : 'CNY';
+    const description = `LiveOverlay ${limits.displayName} - ${billingPeriod === 'yearly' ? 'Yearly' : 'Monthly'}`;
 
     // 保存订单到数据库
     const supabase = getSupabaseClient();
@@ -78,6 +87,7 @@ export async function POST(request: NextRequest) {
       trade_order_id: orderId,
       payment_method: paymentMethod,
       amount: amount,
+      currency: currency,
       current_period_start: new Date().toISOString(),
       current_period_end: new Date(Date.now() + (billingPeriod === 'yearly' ? 365 : 30) * 86400000).toISOString(),
       created_at: new Date().toISOString(),
@@ -85,17 +95,29 @@ export async function POST(request: NextRequest) {
     });
 
     // 创建支付订单
-    if (paymentMethod === 'wechat') {
+    if (paymentMethod === 'paypal') {
+      // PayPal 支付
+      const result = await createPaypalOrder(orderId, amount, description, currency);
+      return NextResponse.json({
+        url: result.approveUrl,
+        paypalOrderId: result.orderId,
+        tradeOrderId: orderId,
+        channel: 'paypal',
+        amount: amount.toFixed(2),
+        currency: currency,
+      });
+    } else if (paymentMethod === 'wechat') {
       // 微信支付：Native 扫码支付
       const result = await createNativeOrder(orderId, amount, description);
       if (!result?.code_url) {
-        return NextResponse.json({ error: '微信支付订单创建失败' }, { status: 500 });
+        return NextResponse.json({ error: 'WeChat Pay order creation failed' }, { status: 500 });
       }
       return NextResponse.json({
         qrCodeUrl: result.code_url,
         tradeOrderId: orderId,
         channel: 'wechat',
         amount: amount.toString(),
+        currency: currency,
       });
     } else {
       // 支付宝：扫码支付（优先）或页面支付
@@ -106,6 +128,7 @@ export async function POST(request: NextRequest) {
           tradeOrderId: orderId,
           channel: 'alipay',
           amount: amount.toString(),
+          currency: currency,
         });
       }
 
@@ -117,14 +140,15 @@ export async function POST(request: NextRequest) {
           tradeOrderId: orderId,
           channel: 'alipay',
           amount: amount.toString(),
+          currency: currency,
         });
       }
 
-      return NextResponse.json({ error: '支付宝订单创建失败' }, { status: 500 });
+      return NextResponse.json({ error: 'Alipay order creation failed' }, { status: 500 });
     }
   } catch (error: unknown) {
-    console.error('[Checkout] 创建支付订单失败:', error);
-    const msg = error instanceof Error ? error.message : '未知错误';
+    console.error('[Checkout] Payment order creation failed:', error);
+    const msg = error instanceof Error ? error.message : 'Unknown error';
     return NextResponse.json({ error: msg }, { status: 500 });
   }
 }
