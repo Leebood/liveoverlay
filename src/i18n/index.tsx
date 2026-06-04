@@ -27,8 +27,7 @@ function getInitialLocale(): Locale {
   if (typeof window === 'undefined') return defaultLocale;
   const saved = localStorage.getItem(STORAGE_KEY) as Locale | null;
   if (saved && locales.includes(saved)) return saved;
-  const browserLang = navigator.language.toLowerCase();
-  return browserLang.startsWith('zh') ? 'zh' : 'en';
+  return defaultLocale;
 }
 
 export function I18nProvider({ children }: { children: React.ReactNode }) {

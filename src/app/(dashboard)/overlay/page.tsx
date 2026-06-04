@@ -62,7 +62,7 @@ export default function OverlayPage() {
   const [products, setProducts] = useState<ProductInfo[]>([]);
   const [submitting, setSubmitting] = useState(false);
 
-  const locale = typeof window !== 'undefined' ? localStorage.getItem('liveoverlay-locale') || 'zh' : 'zh';
+  const locale = typeof window !== 'undefined' ? localStorage.getItem('liveoverlay-locale') || 'en' : 'en';
 
   const loadOverlays = useCallback(async () => {
     if (!storeId) return;
