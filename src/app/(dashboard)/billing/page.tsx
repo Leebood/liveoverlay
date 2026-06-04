@@ -85,6 +85,9 @@ export default function BillingPage() {
       } else if (data.paypalOrderId) {
         setPaypalOrderId(data.paypalOrderId);
         setPaypalApproveUrl(data.approveUrl || '');
+        setCurrentTradeOrderId(data.tradeOrderId || '');
+        setCurrentChannel('paypal');
+        setCurrentAmount(data.amount || '');
         setPayStatus('scanning');
         setPayModalVisible(true);
       } else if (data.url) {
@@ -100,13 +103,13 @@ export default function BillingPage() {
   };
 
   const checkPayStatus = async () => {
-    if (!paypalOrderId) return;
+    if (!paypalOrderId || !currentTradeOrderId) return;
     setPaypalChecking(true);
     try {
       const res = await fetch('/api/billing/paypal-capture', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ orderId: paypalOrderId, planType: checkoutLoading }),
+        body: JSON.stringify({ paypalOrderId, tradeOrderId: currentTradeOrderId }),
       });
       const data = await res.json();
       if (data.success) {
@@ -298,6 +301,7 @@ export default function BillingPage() {
               <Title level={4}><PayPalOutlined style={{ color: '#003087', marginRight: 8 }} />PayPal / Visa</Title>
               <Text type="secondary">{t('billing.paypalApproveHint')}</Text>
             </div>
+            {currentAmount && <div className="mb-4"><Text strong className="text-2xl">${currentAmount}</Text></div>}
             {paypalApproveUrl ? (
               <a href={paypalApproveUrl} target="_blank" rel="noopener noreferrer">
                 <Button type="primary" size="large" icon={<PayPalOutlined />} style={{ backgroundColor: '#0070ba', borderColor: '#0070ba' }}>

@@ -151,13 +151,42 @@ export async function capturePaypalOrder(paypalOrderId: string): Promise<{
 }
 
 /** Verify PayPal webhook signature */
-export function verifyPaypalWebhook(
+export async function verifyPaypalWebhook(
   headers: Record<string, string>,
   body: string,
-): boolean {
-  // In production, implement full PayPal webhook signature verification
-  // For now, basic check
-  const transmissionId = headers['paypal-transmission-id'];
-  const certUrl = headers['paypal-cert-url'];
-  return !!(transmissionId && certUrl);
+): Promise<boolean> {
+  const webhookId = process.env.PAYPAL_WEBHOOK_ID;
+  if (!webhookId) {
+    console.warn('[PayPal Webhook] PAYPAL_WEBHOOK_ID is not configured');
+    return false;
+  }
+
+  const token = await getAccessToken();
+  const eventBody = JSON.parse(body);
+
+  const res = await fetch(`${PAYPAL_API_BASE}/v1/notifications/verify-webhook-signature`, {
+    method: 'POST',
+    headers: {
+      'Authorization': `Bearer ${token}`,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({
+      auth_algo: headers['paypal-auth-algo'],
+      cert_url: headers['paypal-cert-url'],
+      transmission_id: headers['paypal-transmission-id'],
+      transmission_sig: headers['paypal-transmission-sig'],
+      transmission_time: headers['paypal-transmission-time'],
+      webhook_id: webhookId,
+      webhook_event: eventBody,
+    }),
+  });
+
+  if (!res.ok) {
+    const err = await res.text();
+    console.error('[PayPal Webhook] Signature verification request failed:', err);
+    return false;
+  }
+
+  const data = await res.json() as { verification_status?: string };
+  return data.verification_status === 'SUCCESS';
 }

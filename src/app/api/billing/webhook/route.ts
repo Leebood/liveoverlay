@@ -70,8 +70,21 @@ export async function GET(request: NextRequest) {
 
 async function handlePaypalCallback(request: NextRequest) {
   const body = await request.text();
+  const headers: Record<string, string> = {
+    'paypal-auth-algo': request.headers.get('paypal-auth-algo') || '',
+    'paypal-cert-url': request.headers.get('paypal-cert-url') || '',
+    'paypal-transmission-id': request.headers.get('paypal-transmission-id') || '',
+    'paypal-transmission-sig': request.headers.get('paypal-transmission-sig') || '',
+    'paypal-transmission-time': request.headers.get('paypal-transmission-time') || '',
+  };
 
   try {
+    const isValid = await verifyPaypalWebhook(headers, body);
+    if (!isValid) {
+      console.warn('[Webhook/PayPal] Signature verification failed');
+      return NextResponse.json({ error: 'Invalid PayPal webhook signature' }, { status: 400 });
+    }
+
     const data = JSON.parse(body);
     const eventType = data.event_type;
 
@@ -82,7 +95,7 @@ async function handlePaypalCallback(request: NextRequest) {
         // Capture the order
         const captureResult = await capturePaypalOrder(paypalOrderId);
         if (captureResult?.success) {
-          const customId = data.resource?.purchase_units?.[0]?.custom_id;
+          const customId = captureResult.customId;
           if (customId) {
             const supabase = getSupabaseClient();
             await supabase
@@ -93,6 +106,7 @@ async function handlePaypalCallback(request: NextRequest) {
                 updated_at: new Date().toISOString(),
               })
               .eq('trade_order_id', customId)
+              .eq('payment_method', 'paypal')
               .eq('status', 'pending');
 
             console.log(`[Webhook/PayPal] Order ${customId} payment successful`);
@@ -112,6 +126,7 @@ async function handlePaypalCallback(request: NextRequest) {
             updated_at: new Date().toISOString(),
           })
           .eq('trade_order_id', customId)
+          .eq('payment_method', 'paypal')
           .eq('status', 'pending');
 
         console.log(`[Webhook/PayPal] Capture ${customId} completed`);

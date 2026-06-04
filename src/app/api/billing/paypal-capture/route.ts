@@ -27,9 +27,18 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'PayPal capture failed' }, { status: 500 });
     }
 
+    if (result.customId !== tradeOrderId) {
+      console.error('[PayPal Capture] Order mismatch:', {
+        expected: tradeOrderId,
+        received: result.customId,
+        paypalOrderId,
+      });
+      return NextResponse.json({ error: 'PayPal order mismatch' }, { status: 400 });
+    }
+
     // Update subscription status
     const supabase = getSupabaseClient();
-    const { error } = await supabase
+    const { data, error } = await supabase
       .from('subscriptions')
       .update({
         status: 'active',
@@ -37,11 +46,18 @@ export async function POST(request: NextRequest) {
         updated_at: new Date().toISOString(),
       })
       .eq('trade_order_id', tradeOrderId)
-      .eq('status', 'pending');
+      .eq('payment_method', 'paypal')
+      .eq('status', 'pending')
+      .select('trade_order_id')
+      .maybeSingle();
 
     if (error) {
       console.error('[PayPal Capture] DB update failed:', error);
       return NextResponse.json({ error: 'Failed to update subscription' }, { status: 500 });
+    }
+
+    if (!data) {
+      return NextResponse.json({ error: 'Pending PayPal order not found' }, { status: 404 });
     }
 
     console.log(`[PayPal Capture] Order ${tradeOrderId} payment captured and activated`);
