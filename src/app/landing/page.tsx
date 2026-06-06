@@ -10,8 +10,10 @@ import {
   LayoutOutlined,
   FacebookOutlined,
   RocketOutlined,
-  CheckCircleOutlined,
   GlobalOutlined,
+  MobileOutlined,
+  DesktopOutlined,
+  CodeOutlined,
 } from '@ant-design/icons';
 import { useI18n } from '@/i18n';
 import LanguageSwitcher from '@/components/common/LanguageSwitcher';
@@ -61,6 +63,34 @@ export default function LandingPage() {
     t('landing.steps.3'),
     t('landing.steps.4'),
     t('landing.steps.5'),
+  ];
+
+  const supportedTools = [
+    {
+      icon: <MobileOutlined style={{ fontSize: 28, color: '#1677FF' }} />,
+      name: 'PRISM Live Mobile',
+      desc: t('landing.tools.prismMobile'),
+    },
+    {
+      icon: <DesktopOutlined style={{ fontSize: 28, color: '#722ED1' }} />,
+      name: 'PRISM Live Desktop',
+      desc: t('landing.tools.prismDesktop'),
+    },
+    {
+      icon: <PlayCircleOutlined style={{ fontSize: 28, color: '#52C41A' }} />,
+      name: 'OBS Studio',
+      desc: t('landing.tools.obs'),
+    },
+    {
+      icon: <GlobalOutlined style={{ fontSize: 28, color: '#13C2C2' }} />,
+      name: 'Streamlabs',
+      desc: t('landing.tools.streamlabs'),
+    },
+    {
+      icon: <CodeOutlined style={{ fontSize: 28, color: '#FA8C16' }} />,
+      name: t('landing.tools.browserSource'),
+      desc: t('landing.tools.browserSourceDesc'),
+    },
   ];
 
   return (
@@ -138,6 +168,33 @@ export default function LandingPage() {
             </>
           )}
         </Space>
+      </div>
+
+      {/* Supported Tools */}
+      <div style={{ padding: '44px 48px', borderBottom: '1px solid #f0f0f0' }}>
+        <div style={{ maxWidth: 1200, margin: '0 auto' }}>
+          <div style={{ textAlign: 'center', marginBottom: 28 }}>
+            <Title level={2} style={{ marginBottom: 8 }}>
+              {t('landing.tools.title')}
+            </Title>
+            <Paragraph style={{ color: '#666', fontSize: 16, marginBottom: 0 }}>
+              {t('landing.tools.subtitle')}
+            </Paragraph>
+          </div>
+          <Row gutter={[16, 16]} justify="center">
+            {supportedTools.map((tool) => (
+              <Col xs={24} sm={12} md={8} lg={4} key={tool.name}>
+                <Card hoverable style={{ height: '100%', textAlign: 'center' }} bodyStyle={{ padding: 18 }}>
+                  <div style={{ marginBottom: 12 }}>{tool.icon}</div>
+                  <Text strong>{tool.name}</Text>
+                  <Paragraph style={{ color: '#888', fontSize: 13, marginTop: 8, marginBottom: 0 }}>
+                    {tool.desc}
+                  </Paragraph>
+                </Card>
+              </Col>
+            ))}
+          </Row>
+        </div>
       </div>
 
       {/* Features */}
