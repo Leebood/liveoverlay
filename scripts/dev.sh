@@ -9,9 +9,23 @@ DEPLOY_RUN_PORT="${DEPLOY_RUN_PORT:-${PORT}}"
 
 cd "${COZE_WORKSPACE_PATH}"
 
+list_port_pids() {
+    if command -v ss >/dev/null 2>&1; then
+      ss -H -lntp 2>/dev/null | awk -v port="${DEPLOY_RUN_PORT}" '$4 ~ ":"port"$"' | grep -o 'pid=[0-9]*' | cut -d= -f2 | paste -sd' ' - || true
+      return
+    fi
+
+    if command -v lsof >/dev/null 2>&1; then
+      lsof -tiTCP:"${DEPLOY_RUN_PORT}" -sTCP:LISTEN 2>/dev/null | paste -sd' ' - || true
+      return
+    fi
+
+    true
+}
+
 kill_port_if_listening() {
     local pids
-    pids=$(ss -H -lntp 2>/dev/null | awk -v port="${DEPLOY_RUN_PORT}" '$4 ~ ":"port"$"' | grep -o 'pid=[0-9]*' | cut -d= -f2 | paste -sd' ' - || true)
+    pids=$(list_port_pids)
     if [[ -z "${pids}" ]]; then
       echo "Port ${DEPLOY_RUN_PORT} is free."
       return
@@ -19,7 +33,7 @@ kill_port_if_listening() {
     echo "Port ${DEPLOY_RUN_PORT} in use by PIDs: ${pids} (SIGKILL)"
     echo "${pids}" | xargs -I {} kill -9 {}
     sleep 1
-    pids=$(ss -H -lntp 2>/dev/null | awk -v port="${DEPLOY_RUN_PORT}" '$4 ~ ":"port"$"' | grep -o 'pid=[0-9]*' | cut -d= -f2 | paste -sd' ' - || true)
+    pids=$(list_port_pids)
     if [[ -n "${pids}" ]]; then
       echo "Warning: port ${DEPLOY_RUN_PORT} still busy after SIGKILL, PIDs: ${pids}"
     else

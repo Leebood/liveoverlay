@@ -87,7 +87,7 @@ export async function POST(request: Request) {
         slug,
         owner_id: userId,
         currency: 'CNY',
-        language: 'zh',
+        language: 'en',
       });
 
     if (storeError) {

@@ -37,7 +37,7 @@ export async function GET() {
           slug,
           owner_id: userId,
           currency: 'USD',
-          language: 'zh',
+          language: 'en',
         })
         .select()
         .single();

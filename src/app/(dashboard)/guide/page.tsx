@@ -225,16 +225,18 @@ export default function GuidePage() {
             ),
           },
           {
-            key: 'obs',
-            label: <span><VideoCameraOutlined /> {t('guide.tabObs')}</span>,
+            key: 'streaming',
+            label: <span><VideoCameraOutlined /> {t('guide.tabStreaming')}</span>,
             children: (
               <div>
-                <Alert type="info" showIcon title={t('guide.obsVersion')} description={t('guide.obsVersionDesc')} className="mb-4" />
+                <Alert type="info" showIcon title={t('guide.streamingTitle')} description={t('guide.streamingDesc')} className="mb-4" />
                 <Collapse items={[
-                  { key: '1', label: t('guide.obsAddSource'), children: <Paragraph>{t('guide.obsAddSourceDesc')}</Paragraph> },
-                  { key: '2', label: t('guide.obsConfig'), children: <Paragraph>{t('guide.obsConfigDesc')}</Paragraph> },
-                  { key: '3', label: t('guide.obsPosition'), children: <Paragraph>{t('guide.obsPositionDesc')}</Paragraph> },
-                  { key: '4', label: t('guide.obsRefresh'), children: <Paragraph>{t('guide.obsRefreshDesc')}</Paragraph> },
+                  { key: '1', label: t('guide.prismMobileSetup'), children: <Paragraph>{t('guide.prismMobileSetupDesc')}</Paragraph> },
+                  { key: '2', label: t('guide.prismDesktopSetup'), children: <Paragraph>{t('guide.prismDesktopSetupDesc')}</Paragraph> },
+                  { key: '3', label: t('guide.obsAddSource'), children: <Paragraph>{t('guide.obsAddSourceDesc')}</Paragraph> },
+                  { key: '4', label: t('guide.obsConfig'), children: <Paragraph>{t('guide.obsConfigDesc')}</Paragraph> },
+                  { key: '5', label: t('guide.obsPosition'), children: <Paragraph>{t('guide.obsPositionDesc')}</Paragraph> },
+                  { key: '6', label: t('guide.obsRefresh'), children: <Paragraph>{t('guide.obsRefreshDesc')}</Paragraph> },
                 ]} />
               </div>
             ),

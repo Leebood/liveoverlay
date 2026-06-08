@@ -65,10 +65,6 @@ export async function GET(request: NextRequest) {
   return NextResponse.redirect(`${appUrl}/billing?paid=true`);
 }
 
-async function handlePaypalCallback_DELETED() {
-  return NextResponse.json({ status: 'disabled' });
-}
-
 async function handleWechatCallback(request: NextRequest) {
   const timestamp = request.headers.get('wechatpay-timestamp') || '';
   const nonce = request.headers.get('wechatpay-nonce') || '';

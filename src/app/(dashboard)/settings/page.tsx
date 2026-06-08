@@ -51,7 +51,7 @@ export default function SettingsPage() {
   const [logoUrl, setLogoUrl] = useState<string | null>(null);
   const [logoFile, setLogoFile] = useState<File | null>(null);
 
-  const locale = typeof window !== 'undefined' ? localStorage.getItem('liveoverlay-locale') || 'zh' : 'zh';
+  const locale = typeof window !== 'undefined' ? localStorage.getItem('liveoverlay-locale') || 'en' : 'en';
 
   useEffect(() => {
     if (storeId) {

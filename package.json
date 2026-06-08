@@ -1,17 +1,17 @@
 {
-  "name": "projects",
+  "name": "liveoverlay",
   "version": "0.1.0",
   "private": true,
   "scripts": {
     "build": "bash ./scripts/build.sh",
-    "build:vercel": "next build",
+    "build:vercel": "next build --webpack",
     "dev": "bash ./scripts/dev.sh",
     "preinstall": "npx only-allow pnpm || true",
     "lint": "eslint",
     "lint:build": "eslint . --quiet",
     "start": "bash ./scripts/start.sh",
     "start:vercel": "next start",
-    "ts-check": "tsc -p tsconfig.json",
+    "ts-check": "tsc -p tsconfig.typecheck.json",
     "validate": "pnpm run --parallel '/^(ts-check|lint:build)$/'"
   },
   "dependencies": {

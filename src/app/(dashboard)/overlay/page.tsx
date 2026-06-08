@@ -2,8 +2,8 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
-import { Card, Button, Typography, Space, Empty, Tag, Modal, Form, Select, Input, InputNumber, message, Popconfirm, Switch, Spin } from 'antd';
-import { PlusOutlined, CopyOutlined, EyeOutlined, SettingOutlined, DeleteOutlined, EditOutlined } from '@ant-design/icons';
+import { Card, Button, Typography, Space, Empty, Tag, Modal, Form, Select, Input, InputNumber, message, Popconfirm, Switch, Spin, Tabs, Alert } from 'antd';
+import { PlusOutlined, CopyOutlined, EyeOutlined, SettingOutlined, DeleteOutlined, EditOutlined, VideoCameraOutlined } from '@ant-design/icons';
 import { useSession } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
 import { getPlanLimits } from '@/lib/plan-limits';
@@ -55,6 +55,8 @@ export default function OverlayPage() {
   const [editModalOpen, setEditModalOpen] = useState(false);
   const [previewModalOpen, setPreviewModalOpen] = useState(false);
   const [previewOverlay, setPreviewOverlay] = useState<Overlay | null>(null);
+  const [setupOverlay, setSetupOverlay] = useState<Overlay | null>(null);
+  const [setupModalOpen, setSetupModalOpen] = useState(false);
   const [editingOverlay, setEditingOverlay] = useState<Overlay | null>(null);
   const [form] = Form.useForm();
   const [editForm] = Form.useForm();
@@ -62,7 +64,7 @@ export default function OverlayPage() {
   const [products, setProducts] = useState<ProductInfo[]>([]);
   const [submitting, setSubmitting] = useState(false);
 
-  const locale = typeof window !== 'undefined' ? localStorage.getItem('liveoverlay-locale') || 'zh' : 'zh';
+  const locale = typeof window !== 'undefined' ? localStorage.getItem('liveoverlay-locale') || 'en' : 'en';
 
   const loadOverlays = useCallback(async () => {
     if (!storeId) return;
@@ -207,10 +209,17 @@ export default function OverlayPage() {
     setPreviewModalOpen(true);
   };
 
+  const getOverlayUrl = (overlay: Overlay) => `${window.location.origin}/overlay/${storeId}/${overlay.id}`;
+
   const copyOverlayUrl = (overlay: Overlay) => {
-    const url = `${window.location.origin}/overlay/${storeId}/${overlay.id}`;
+    const url = getOverlayUrl(overlay);
     navigator.clipboard.writeText(url);
     message.success(t('overlay.urlCopied'));
+  };
+
+  const openSetup = (overlay: Overlay) => {
+    setSetupOverlay(overlay);
+    setSetupModalOpen(true);
   };
 
   const getTemplateName = (templateId: string) => {
@@ -268,6 +277,9 @@ export default function OverlayPage() {
               <Space direction="vertical" className="w-full">
                 <Button icon={<CopyOutlined />} onClick={() => copyOverlayUrl(overlay)} className="w-full">
                   {t('overlay.copyUrl')}
+                </Button>
+                <Button icon={<VideoCameraOutlined />} onClick={() => openSetup(overlay)} className="w-full">
+                  {t('overlay.streamingSetup')}
                 </Button>
                 <Space className="w-full justify-between">
                   <Button icon={<EyeOutlined />} size="small" onClick={() => openPreview(overlay)}>{t('overlay.preview')}</Button>
@@ -338,6 +350,73 @@ export default function OverlayPage() {
               title={previewOverlay.name}
             />
           </div>
+        )}
+      </Modal>
+
+      {/* Streaming Setup Modal */}
+      <Modal title={t('overlay.streamingSetup')} open={setupModalOpen} onCancel={() => { setSetupModalOpen(false); setSetupOverlay(null); }} footer={null} width={760}>
+        {setupOverlay && (
+          <Space direction="vertical" size="middle" className="w-full">
+            <Alert type="info" showIcon message={t('overlay.streamingUrlTitle')} description={t('overlay.streamingUrlDesc')} />
+            <div className="rounded border bg-gray-50 p-3">
+              <Text code className="block break-all">{getOverlayUrl(setupOverlay)}</Text>
+              <Button icon={<CopyOutlined />} className="mt-3" onClick={() => copyOverlayUrl(setupOverlay)}>
+                {t('overlay.copyStreamingUrl')}
+              </Button>
+            </div>
+            <Tabs
+              items={[
+                {
+                  key: 'prism-mobile',
+                  label: t('overlay.prismMobile'),
+                  children: (
+                    <Space direction="vertical" size={6}>
+                      <Text>1. {t('overlay.prismMobileStep1')}</Text>
+                      <Text>2. {t('overlay.prismMobileStep2')}</Text>
+                      <Text>3. {t('overlay.prismMobileStep3')}</Text>
+                      <Text>4. {t('overlay.streamingSizeStep', { width: String(setupOverlay.width), height: String(setupOverlay.height) })}</Text>
+                    </Space>
+                  ),
+                },
+                {
+                  key: 'prism-desktop',
+                  label: t('overlay.prismDesktop'),
+                  children: (
+                    <Space direction="vertical" size={6}>
+                      <Text>1. {t('overlay.prismDesktopStep1')}</Text>
+                      <Text>2. {t('overlay.prismDesktopStep2')}</Text>
+                      <Text>3. {t('overlay.prismDesktopStep3')}</Text>
+                      <Text>4. {t('overlay.streamingSizeStep', { width: String(setupOverlay.width), height: String(setupOverlay.height) })}</Text>
+                    </Space>
+                  ),
+                },
+                {
+                  key: 'obs',
+                  label: 'OBS',
+                  children: (
+                    <Space direction="vertical" size={6}>
+                      <Text>1. {t('overlay.obsStep1')}</Text>
+                      <Text>2. {t('overlay.obsStep2')}</Text>
+                      <Text>3. {t('overlay.obsStep3')}</Text>
+                      <Text>4. {t('overlay.streamingSizeStep', { width: String(setupOverlay.width), height: String(setupOverlay.height) })}</Text>
+                    </Space>
+                  ),
+                },
+                {
+                  key: 'streamlabs',
+                  label: 'Streamlabs',
+                  children: (
+                    <Space direction="vertical" size={6}>
+                      <Text>1. {t('overlay.streamlabsStep1')}</Text>
+                      <Text>2. {t('overlay.streamlabsStep2')}</Text>
+                      <Text>3. {t('overlay.streamlabsStep3')}</Text>
+                      <Text>4. {t('overlay.streamingSizeStep', { width: String(setupOverlay.width), height: String(setupOverlay.height) })}</Text>
+                    </Space>
+                  ),
+                },
+              ]}
+            />
+          </Space>
         )}
       </Modal>
     </div>
