@@ -2,13 +2,12 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { verifyCallback as verifyWechatCallback } from '@/lib/wechat-pay';
 import { verifyCallback as verifyAlipayCallback } from '@/lib/alipay';
-import { capturePaypalOrder, verifyPaypalWebhook } from '@/lib/paypal';
 import { getSupabaseClient } from '@/storage/database/supabase-client';
 
 /**
  * POST /api/billing/webhook/wechat
  * POST /api/billing/webhook/alipay
- * POST /api/billing/webhook/paypal
+ * POST /api/billing/webhook/creem  (see ./creem/route.ts)
  */
 export async function POST(request: NextRequest) {
   try {
@@ -17,9 +16,7 @@ export async function POST(request: NextRequest) {
     const pathParts = url.pathname.split('/');
     const channel = pathParts[pathParts.length - 1];
 
-    if (channel === 'paypal') {
-      return handlePaypalCallback(request);
-    } else if (channel === 'wechat') {
+    if (channel === 'wechat') {
       return handleWechatCallback(request);
     } else if (channel === 'alipay') {
       return handleAlipayCallback(request);
@@ -68,60 +65,8 @@ export async function GET(request: NextRequest) {
   return NextResponse.redirect(`${appUrl}/billing?paid=true`);
 }
 
-async function handlePaypalCallback(request: NextRequest) {
-  const body = await request.text();
-
-  try {
-    const data = JSON.parse(body);
-    const eventType = data.event_type;
-
-    // PayPal webhook events
-    if (eventType === 'CHECKOUT.ORDER.APPROVED') {
-      const paypalOrderId = data.resource?.id;
-      if (paypalOrderId) {
-        // Capture the order
-        const captureResult = await capturePaypalOrder(paypalOrderId);
-        if (captureResult?.success) {
-          const customId = data.resource?.purchase_units?.[0]?.custom_id;
-          if (customId) {
-            const supabase = getSupabaseClient();
-            await supabase
-              .from('subscriptions')
-              .update({
-                status: 'active',
-                paid_at: new Date().toISOString(),
-                updated_at: new Date().toISOString(),
-              })
-              .eq('trade_order_id', customId)
-              .eq('status', 'pending');
-
-            console.log(`[Webhook/PayPal] Order ${customId} payment successful`);
-          }
-        }
-      }
-    } else if (eventType === 'PAYMENT.CAPTURE.COMPLETED') {
-      // Fallback: capture completed directly
-      const customId = data.resource?.custom_id;
-      if (customId) {
-        const supabase = getSupabaseClient();
-        await supabase
-          .from('subscriptions')
-          .update({
-            status: 'active',
-            paid_at: new Date().toISOString(),
-            updated_at: new Date().toISOString(),
-          })
-          .eq('trade_order_id', customId)
-          .eq('status', 'pending');
-
-        console.log(`[Webhook/PayPal] Capture ${customId} completed`);
-      }
-    }
-
-    return NextResponse.json({ status: 'OK' });
-  } catch {
-    return NextResponse.json({ error: 'Invalid data' }, { status: 400 });
-  }
+async function handlePaypalCallback_DELETED() {
+  return NextResponse.json({ status: 'disabled' });
 }
 
 async function handleWechatCallback(request: NextRequest) {

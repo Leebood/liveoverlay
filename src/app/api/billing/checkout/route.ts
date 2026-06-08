@@ -1,8 +1,9 @@
 // src/app/api/billing/checkout/route.ts
 import { NextRequest, NextResponse } from 'next/server';
+import { getServerSession } from 'next-auth';
 import { createNativeOrder, isWechatPayEnabled } from '@/lib/wechat-pay';
 import { createPrecreateOrder, createPagePayOrder, isAlipayEnabled } from '@/lib/alipay';
-import { createPaypalOrder, isPaypalEnabled } from '@/lib/paypal';
+import { createCreemCheckout, isCreemEnabled } from '@/lib/creem';
 import { getPlanLimits } from '@/lib/plan-limits';
 import { getSupabaseClient } from '@/storage/database/supabase-client';
 import type { PlanType } from '@/types/plan';
@@ -19,7 +20,7 @@ export async function POST(request: NextRequest) {
     const body = await request.json() as {
       planType: PlanType;
       billingPeriod: 'monthly' | 'yearly';
-      paymentMethod: 'wechat' | 'alipay' | 'paypal';
+      paymentMethod: 'wechat' | 'alipay' | 'creem';
     };
 
     const { planType, billingPeriod, paymentMethod } = body;
@@ -32,15 +33,19 @@ export async function POST(request: NextRequest) {
     // 检查支付方式是否可用
     const wechatEnabled = isWechatPayEnabled();
     const alipayEnabled = isAlipayEnabled();
-    const paypalEnabled = isPaypalEnabled();
+    const creemEnabled = isCreemEnabled();
 
     // 如果三者都未配置，进入演示模式
-    if (!wechatEnabled && !alipayEnabled && !paypalEnabled) {
+    if (!wechatEnabled && !alipayEnabled && !creemEnabled) {
       const supabase = getSupabaseClient();
+      const session = await getServerSession();
+      const userId = (session?.user as Record<string, unknown> | undefined)?.id
+        ? String((session?.user as Record<string, unknown>).id)
+        : 'demo-user';
       await supabase
         .from('subscriptions')
         .upsert({
-          user_id: 'demo-user',
+          user_id: userId,
           plan_type: planType,
           billing_period: billingPeriod,
           status: 'active',
@@ -63,24 +68,31 @@ export async function POST(request: NextRequest) {
     if (paymentMethod === 'alipay' && !alipayEnabled) {
       return NextResponse.json({ error: 'Alipay not configured' }, { status: 400 });
     }
-    if (paymentMethod === 'paypal' && !paypalEnabled) {
-      return NextResponse.json({ error: 'PayPal not configured' }, { status: 400 });
+    if (paymentMethod === 'creem' && !creemEnabled) {
+      return NextResponse.json({ error: 'Creem not configured' }, { status: 400 });
     }
 
     const orderId = generateOrderId();
+    const supabase = getSupabaseClient();
+    const session = await getServerSession();
+    const userId = (session?.user as Record<string, unknown> | undefined)?.id
+      ? String((session?.user as Record<string, unknown>).id)
+      : 'demo-user';
+    const userEmail = (session?.user as Record<string, unknown> | undefined)?.email
+      ? String((session?.user as Record<string, unknown>).email)
+      : undefined;
 
-    // PayPal 使用 USD，微信/支付宝使用 CNY
-    const isPaypal = paymentMethod === 'paypal';
-    const amount = isPaypal
+    // Creem 使用 USD，微信/支付宝使用 CNY
+    const isCreem = paymentMethod === 'creem';
+    const amount = isCreem
       ? (billingPeriod === 'yearly' ? limits.yearlyPrice : limits.price)
       : (billingPeriod === 'yearly' ? limits.yearlyPriceCNY : limits.priceCNY);
-    const currency = isPaypal ? 'USD' : 'CNY';
+    const currency = isCreem ? 'USD' : 'CNY';
     const description = `LiveOverlay ${limits.displayName} - ${billingPeriod === 'yearly' ? 'Yearly' : 'Monthly'}`;
 
     // 保存订单到数据库
-    const supabase = getSupabaseClient();
     await supabase.from('subscriptions').upsert({
-      user_id: 'demo-user',
+      user_id: userId,
       plan_type: planType,
       billing_period: billingPeriod,
       status: 'pending',
@@ -95,14 +107,28 @@ export async function POST(request: NextRequest) {
     });
 
     // 创建支付订单
-    if (paymentMethod === 'paypal') {
-      // PayPal 支付
-      const result = await createPaypalOrder(orderId, amount, description, currency);
+    if (paymentMethod === 'creem') {
+      // Creem 支付
+      const result = await createCreemCheckout({
+        planType,
+        billingPeriod,
+        amount,
+        currency,
+        orderId,
+        customer: { email: userEmail },
+        metadata: { userId, planType, billingPeriod, orderId },
+      });
+      if (!result) {
+        return NextResponse.json({ error: 'Creem checkout creation failed' }, { status: 500 });
+      }
+      if (!result.checkoutUrl) {
+        return NextResponse.json({ error: 'Creem returned empty checkout URL' }, { status: 500 });
+      }
       return NextResponse.json({
-        url: result.approveUrl,
-        paypalOrderId: result.orderId,
+        checkoutUrl: result.checkoutUrl,
+        checkoutId: result.id,
         tradeOrderId: orderId,
-        channel: 'paypal',
+        channel: 'creem',
         amount: amount.toFixed(2),
         currency: currency,
       });
