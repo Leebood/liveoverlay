@@ -24,9 +24,20 @@ interface PlanFeature {
 }
 
 export default function BillingPage() {
-  const { t } = useI18n();
+  const { t, locale } = useI18n();
   const { data: session, update: updateSession } = useSession();
   const planType = ((session?.user as Record<string, unknown>)?.planType || 'free') as PlanType;
+
+  // Locale-aware price display: en -> USD, zh -> CNY
+  const currencySymbol = locale === 'en' ? '$' : '¥';
+  const formatPrice = (amount: number) => {
+    if (locale === 'en') {
+      // USD: 2 decimals
+      return amount % 1 === 0 ? `$${amount}` : `$${amount.toFixed(2)}`;
+    }
+    return `¥${amount}`;
+  };
+
   const [billingPeriod, setBillingPeriod] = useState<'monthly' | 'yearly'>('monthly');
   const [checkoutLoading, setCheckoutLoading] = useState<string | null>(null);
   const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>('wechat');
@@ -152,9 +163,15 @@ export default function BillingPage() {
 
   const getPrice = (plan: PlanType) => {
     const limits = getPlanLimits(plan);
+    if (locale === 'en') {
+      return billingPeriod === 'yearly' ? Math.round(limits.yearlyPrice / 12) : limits.price;
+    }
     return billingPeriod === 'yearly' ? Math.round(limits.yearlyPriceCNY / 12) : limits.priceCNY;
   };
-  const getYearlyTotal = (plan: PlanType) => getPlanLimits(plan).yearlyPriceCNY;
+  const getYearlyTotal = (plan: PlanType) => {
+    const limits = getPlanLimits(plan);
+    return locale === 'en' ? limits.yearlyPrice : limits.yearlyPriceCNY;
+  };
 
   // Plan features comparison table data
   const planFeatures: PlanFeature[] = [
@@ -229,11 +246,11 @@ export default function BillingPage() {
                 {plan === 'pro' && <Tag color="purple" className="absolute -top-3 left-1/2 -translate-x-1/2">{t('billing.popular')}</Tag>}
                 <div className="text-center mb-4">
                   <PlanBadge planType={plan} />
-                  <Title level={2} className="!mt-2 !mb-0">{limits.price === 0 ? t('billing.free') : `¥${price}`}</Title>
+                  <Title level={2} className="!mt-2 !mb-0">{limits.price === 0 ? t('billing.free') : formatPrice(price)}</Title>
                   {limits.price > 0 && (
                     <>
                       <Text type="secondary">/{t('billing.month')} {billingPeriod === 'yearly' ? `(${t('billing.yearlyPay')})` : ''}</Text>
-                      {billingPeriod === 'yearly' && <div className="text-xs text-gray-400 mt-1">{t('billing.yearlyTotal')} ¥{yearlyTotal}</div>}
+                      {billingPeriod === 'yearly' && <div className="text-xs text-gray-400 mt-1">{t('billing.yearlyTotal')} {formatPrice(yearlyTotal)}</div>}
                     </>
                   )}
                 </div>
@@ -324,7 +341,7 @@ export default function BillingPage() {
                 <div className="w-[200px] h-[200px] flex items-center justify-center bg-gray-50"><Spin indicator={<LoadingOutlined style={{ fontSize: 32 }} />} /></div>
               )}
             </div>
-            <div className="mb-2"><Text strong className="text-2xl">¥{currentAmount}</Text></div>
+            <div className="mb-2"><Text strong className="text-2xl">{currentChannel === 'creem' ? '$' : '¥'}{currentAmount}</Text></div>
             <div className="flex items-center justify-center gap-2 text-gray-400 text-sm"><LoadingOutlined spin /><span>{t('billing.waitingScan')}</span></div>
             <div className="mt-4 text-gray-400 text-xs">{t('billing.autoDetect')}</div>
           </div>
