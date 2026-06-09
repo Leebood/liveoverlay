@@ -163,14 +163,7 @@ export default function BillingPage() {
 
   const getPrice = (plan: PlanType) => {
     const limits = getPlanLimits(plan);
-    if (locale === 'en') {
-      return billingPeriod === 'yearly' ? Math.round(limits.yearlyPrice / 12) : limits.price;
-    }
-    return billingPeriod === 'yearly' ? Math.round(limits.yearlyPriceCNY / 12) : limits.priceCNY;
-  };
-  const getYearlyTotal = (plan: PlanType) => {
-    const limits = getPlanLimits(plan);
-    return locale === 'en' ? limits.yearlyPrice : limits.yearlyPriceCNY;
+    return locale === 'en' ? limits.price : limits.priceCNY;
   };
 
   // Plan features comparison table data
@@ -208,10 +201,6 @@ export default function BillingPage() {
           <Paragraph type="secondary">{t('billing.currentPlan')}：<PlanBadge planType={planType} /></Paragraph>
         </div>
         <Space wrap>
-          <Radio.Group value={billingPeriod} onChange={e => setBillingPeriod(e.target.value)} optionType="button" size="small">
-            <Radio.Button value="monthly">{t('billing.monthly')}</Radio.Button>
-            <Radio.Button value="yearly">{t('billing.yearly')}</Radio.Button>
-          </Radio.Group>
           {planType !== 'free' && <Button danger onClick={handleCancel}>{t('billing.cancelSub')}</Button>}
         </Space>
       </div>
@@ -236,7 +225,6 @@ export default function BillingPage() {
           const limits = getPlanLimits(plan);
           const isCurrent = plan === planType;
           const price = getPrice(plan);
-          const yearlyTotal = getYearlyTotal(plan);
           return (
             <Col xs={24} sm={12} md={6} key={plan}>
               <Card className={`h-full ${isCurrent ? 'ring-2 ring-indigo-500' : ''} ${plan === 'pro' ? 'shadow-lg' : ''}`}>
@@ -244,12 +232,7 @@ export default function BillingPage() {
                 <div className="text-center mb-4">
                   <PlanBadge planType={plan} />
                   <Title level={2} className="!mt-2 !mb-0">{limits.price === 0 ? t('billing.free') : formatPrice(price)}</Title>
-                  {limits.price > 0 && (
-                    <>
-                      <Text type="secondary">/{t('billing.month')} {billingPeriod === 'yearly' ? `(${t('billing.yearlyPay')})` : ''}</Text>
-                      {billingPeriod === 'yearly' && <div className="text-xs text-gray-400 mt-1">{t('billing.yearlyTotal')} {formatPrice(yearlyTotal)}</div>}
-                    </>
-                  )}
+                  {limits.price > 0 && <Text type="secondary">/{t('billing.month')}</Text>}
                 </div>
                 <Divider />
                 <div className="space-y-2 mb-6">
