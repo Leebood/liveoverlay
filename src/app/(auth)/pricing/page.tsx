@@ -13,11 +13,18 @@ const { Title, Paragraph, Text } = Typography;
 const PLAN_ORDER: PlanType[] = ['free', 'starter', 'pro', 'business'];
 
 export default function PricingPage() {
-  const { t } = useI18n();
+  const { t, locale } = useI18n();
 
   const getPrice = (plan: PlanType) => {
     const limits = getPlanLimits(plan);
-    return limits.priceCNY;
+    return locale === 'en' ? limits.price : limits.priceCNY;
+  };
+  const formatPrice = (amount: number) => {
+    return locale === 'en' ? `$${amount}` : `¥${amount}`;
+  };
+  const getDisplayName = (plan: PlanType) => {
+    // 始终使用 i18n 翻译键（中文/英文都有翻译）
+    return t(`plan.${plan}`);
   };
 
   return (
@@ -54,10 +61,10 @@ export default function PricingPage() {
                   <Tag color="purple" className="absolute -top-3 left-1/2 -translate-x-1/2">{t('pricing.mostPopular')}</Tag>
                 )}
                 <div className="text-center mb-4">
-                  <Title level={4}>{limits.displayName}</Title>
+                  <Title level={4}>{getDisplayName(plan)}</Title>
                   <div>
                     <Title level={1} className="!mt-0 !mb-0 inline">
-                      {price === 0 ? '¥0' : `¥${price}`}
+                      {price === 0 ? (locale === 'en' ? '$0' : '¥0') : formatPrice(price)}
                     </Title>
                     {price > 0 && <Text type="secondary">/{t('pricing.month')}</Text>}
                   </div>
