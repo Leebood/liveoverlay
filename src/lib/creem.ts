@@ -8,12 +8,7 @@ const CREEM_API_URLS = {
 } as const;
 
 type CreemMode = 'test' | 'live';
-
-interface CreemProductIds {
-  starter: string;
-  pro: string;
-  business: string;
-}
+type BillingPeriod = 'monthly' | 'yearly';
 
 function getMode(): CreemMode {
   const mode = (process.env.CREEM_MODE || 'test').toLowerCase();
@@ -32,26 +27,38 @@ function getWebhookSecret(): string {
   return process.env.CREEM_WEBHOOK_SECRET || '';
 }
 
+interface CreemProductIds {
+  starterMonthly: string;
+  starterYearly: string;
+  proMonthly: string;
+  proYearly: string;
+  businessMonthly: string;
+  businessYearly: string;
+}
+
 function getProductIds(): CreemProductIds {
   return {
-    starter: process.env.CREEM_PRODUCT_ID_STARTER || '',
-    pro: process.env.CREEM_PRODUCT_ID_PRO || '',
-    business: process.env.CREEM_PRODUCT_ID_BUSINESS || '',
+    starterMonthly: process.env.CREEM_PRODUCT_ID_STARTER_MONTHLY || process.env.CREEM_PRODUCT_ID_STARTER || '',
+    starterYearly: process.env.CREEM_PRODUCT_ID_STARTER_YEARLY || '',
+    proMonthly: process.env.CREEM_PRODUCT_ID_PRO_MONTHLY || process.env.CREEM_PRODUCT_ID_PRO || '',
+    proYearly: process.env.CREEM_PRODUCT_ID_PRO_YEARLY || '',
+    businessMonthly: process.env.CREEM_PRODUCT_ID_BUSINESS_MONTHLY || process.env.CREEM_PRODUCT_ID_BUSINESS || '',
+    businessYearly: process.env.CREEM_PRODUCT_ID_BUSINESS_YEARLY || '',
   };
 }
 
-function getProductIdForPlan(planType: string): string {
+function getProductIdForPlan(planType: string, billingPeriod: BillingPeriod): string {
   const ids = getProductIds();
-  switch (planType) {
-    case 'starter':
-      return ids.starter;
-    case 'pro':
-      return ids.pro;
-    case 'business':
-      return ids.business;
-    default:
-      return '';
+  if (planType === 'starter') {
+    return billingPeriod === 'yearly' ? ids.starterYearly : ids.starterMonthly;
   }
+  if (planType === 'pro') {
+    return billingPeriod === 'yearly' ? ids.proYearly : ids.proMonthly;
+  }
+  if (planType === 'business') {
+    return billingPeriod === 'yearly' ? ids.businessYearly : ids.businessMonthly;
+  }
+  return '';
 }
 
 export function isCreemEnabled(): boolean {
@@ -60,9 +67,7 @@ export function isCreemEnabled(): boolean {
 
 export interface CreemCheckoutRequest {
   planType: string;
-  billingPeriod: 'monthly' | 'yearly';
-  amount: number;
-  currency: string;
+  billingPeriod: BillingPeriod;
   orderId: string;
   customer?: { email?: string };
   metadata?: Record<string, string>;
@@ -79,6 +84,9 @@ export interface CreemCheckoutResponse {
 /**
  * 创建 Creem 结账会话
  * 文档：https://docs.creem.io/api-reference/endpoint/create-checkout
+ *
+ * 注意：Creem 是 Merchant of Record 平台，价格由 product_id 决定，
+ * 不能在请求中覆盖金额。
  */
 export async function createCreemCheckout(
   request: CreemCheckoutRequest,
@@ -89,14 +97,18 @@ export async function createCreemCheckout(
     return null;
   }
 
-  const productId = getProductIdForPlan(request.planType);
+  const productId = getProductIdForPlan(request.planType, request.billingPeriod);
   if (!productId) {
-    console.error(`[Creem] No product ID configured for plan: ${request.planType}`);
+    console.error(
+      `[Creem] No product ID configured for plan: ${request.planType} (${request.billingPeriod})`,
+    );
     return null;
   }
 
   const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://ailiveonline.com';
-  const successUrl = request.successUrl || `${baseUrl}/${request.orderId}`;
+  const successUrl =
+    request.successUrl ||
+    `${baseUrl}/${request.billingPeriod === 'yearly' ? '?period=yearly' : ''}`;
 
   try {
     const response = await fetch(`${getApiUrl()}/checkouts`, {
@@ -114,8 +126,6 @@ export async function createCreemCheckout(
           ...(request.metadata || {}),
           planType: request.planType,
           billingPeriod: request.billingPeriod,
-          amount: String(request.amount),
-          currency: request.currency,
         },
       }),
     });

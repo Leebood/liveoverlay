@@ -112,8 +112,6 @@ export async function POST(request: NextRequest) {
       const result = await createCreemCheckout({
         planType,
         billingPeriod,
-        amount,
-        currency,
         orderId,
         customer: { email: userEmail },
         metadata: { userId, planType, billingPeriod, orderId },
@@ -129,8 +127,7 @@ export async function POST(request: NextRequest) {
         checkoutId: result.id,
         tradeOrderId: orderId,
         channel: 'creem',
-        amount: amount.toFixed(2),
-        currency: currency,
+        currency: 'USD',
       });
     } else if (paymentMethod === 'wechat') {
       // 微信支付：Native 扫码支付
