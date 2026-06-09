@@ -65,8 +65,8 @@ export async function POST(request: NextRequest) {
     if (paymentMethod === 'wechat' && !wechatEnabled) {
       return NextResponse.json({ error: 'WeChat Pay not configured' }, { status: 400 });
     }
-    if (paymentMethod === 'alipay' && !alipayEnabled) {
-      return NextResponse.json({ error: 'Alipay not configured' }, { status: 400 });
+    if (paymentMethod === 'alipay') {
+      return NextResponse.json({ error: 'Alipay payment is no longer supported, please use WeChat Pay or Creem' }, { status: 400 });
     }
     if (paymentMethod === 'creem' && !creemEnabled) {
       return NextResponse.json({ error: 'Creem not configured' }, { status: 400 });

@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef } from 'react';
 import { Card, Row, Col, Button, Typography, Tag, Space, Divider, Radio, message, Modal, Spin, Result, Tooltip } from 'antd';
-import { CheckOutlined, CrownOutlined, WechatOutlined, AlipayCircleOutlined, LoadingOutlined, CloseOutlined, CreditCardOutlined } from '@ant-design/icons';
+import { CheckOutlined, CrownOutlined, WechatOutlined, LoadingOutlined, CloseOutlined, CreditCardOutlined } from '@ant-design/icons';
 import { useSession } from 'next-auth/react';
 import { getPlanLimits } from '@/lib/plan-limits';
 import PlanBadge from '@/components/common/PlanBadge';
@@ -13,7 +13,7 @@ const { Title, Paragraph, Text } = Typography;
 
 const PLAN_ORDER: PlanType[] = ['free', 'starter', 'pro', 'business'];
 
-type PaymentMethod = 'wechat' | 'alipay' | 'creem';
+type PaymentMethod = 'wechat' | 'creem';
 
 interface PlanFeature {
   key: string;
@@ -223,9 +223,6 @@ export default function BillingPage() {
             <Radio.Button value="wechat">
               <WechatOutlined style={{ color: '#07C160', fontSize: 20, marginRight: 8, verticalAlign: 'middle' }} />{t('billing.wechatPay')}
             </Radio.Button>
-            <Radio.Button value="alipay">
-              <AlipayCircleOutlined style={{ color: '#1677FF', fontSize: 20, marginRight: 8, verticalAlign: 'middle' }} />{t('billing.alipay')}
-            </Radio.Button>
             <Radio.Button value="creem">
               <CreditCardOutlined style={{ color: '#7C3AED', fontSize: 20, marginRight: 8, verticalAlign: 'middle' }} />{t('billing.creem')}
             </Radio.Button>
@@ -332,9 +329,9 @@ export default function BillingPage() {
           <div className="text-center py-4">
             <div className="mb-4">
               <Title level={4}>
-                {currentChannel === 'wechat' ? <><WechatOutlined style={{ color: '#07C160', marginRight: 8 }} />{t('billing.wechatPay')}</> : <><AlipayCircleOutlined style={{ color: '#1677FF', marginRight: 8 }} />{t('billing.alipay')}</>}
+                <><WechatOutlined style={{ color: '#07C160', marginRight: 8 }} />{t('billing.wechatPay')}</>
               </Title>
-              <Text type="secondary">{t('billing.scanToPay', { channel: currentChannel === 'wechat' ? t('billing.wechat') : t('billing.alipayName') })}</Text>
+              <Text type="secondary">{t('billing.scanToPay', { channel: t('billing.wechat') })}</Text>
             </div>
             <div className="inline-block p-4 bg-white border border-gray-200 rounded-lg mb-4">
               {qrCodeUrl ? <img src={`https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(qrCodeUrl)}`} alt={t('billing.qrCode')} width={200} height={200} /> : (
@@ -349,7 +346,7 @@ export default function BillingPage() {
       </Modal>
 
       <div className="mt-8 text-center text-gray-400 text-sm space-y-1">
-        <div><WechatOutlined style={{ color: '#07C160' }} /> {t('billing.wechatPay')}<span className="mx-2">|</span><AlipayCircleOutlined style={{ color: '#1677FF' }} /> {t('billing.alipay')}</div>
+        <div><WechatOutlined style={{ color: '#07C160' }} /> {t('billing.wechatPay')}</div>
         <div>{t('billing.securityNotice')}</div>
         <div>{t('billing.yearlySave')}</div>
       </div>
