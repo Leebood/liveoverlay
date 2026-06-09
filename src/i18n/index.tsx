@@ -52,6 +52,8 @@ export function I18nProvider({ children }: { children: React.ReactNode }) {
       let text = translations[currentLocale]?.[key] || translations[defaultLocale]?.[key] || key;
       if (params) {
         Object.entries(params).forEach(([k, v]) => {
+          // Support both {{key}} (i18next style) and {key}
+          text = text.replace(new RegExp(`\\{\\{${k}\\}\\}`, 'g'), String(v));
           text = text.replace(new RegExp(`\\{${k}\\}`, 'g'), String(v));
         });
       }

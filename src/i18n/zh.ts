@@ -554,6 +554,8 @@ export const zh: Record<string, string> = {
   'planTest.yes': '是',
   'pricing.alipay': '支付宝',
   'pricing.alipayTip': '支付宝扫码支付',
+  'pricing.creem': 'Creem / 国际信用卡',
+  'pricing.creemTip': 'Visa / Mastercard / Apple Pay',
   'pricing.allTemplates': '全部模板',
   'pricing.brandLogo': '品牌Logo',
   'pricing.componentsUnit': '个组件',

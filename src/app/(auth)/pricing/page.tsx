@@ -2,7 +2,7 @@
 'use client';
 
 import { Row, Col, Card, Button, Typography, Tag, Divider, Tooltip, Space } from 'antd';
-import { CheckOutlined, CrownOutlined, WechatOutlined, AlipayCircleOutlined } from '@ant-design/icons';
+import { CheckOutlined, CrownOutlined, WechatOutlined, CreditCardOutlined } from '@ant-design/icons';
 import Link from 'next/link';
 import { getPlanLimits } from '@/lib/plan-limits';
 import { useI18n } from '@/i18n';
@@ -20,11 +20,6 @@ export default function PricingPage() {
     return limits.priceCNY;
   };
 
-  const getYearlyMonthly = (plan: PlanType) => {
-    const limits = getPlanLimits(plan);
-    return Math.round(limits.yearlyPriceCNY / 12);
-  };
-
   return (
     <div className="min-h-screen bg-gradient-to-br from-indigo-50 to-purple-50 py-16 px-4">
       <div className="text-center mb-8">
@@ -40,9 +35,9 @@ export default function PricingPage() {
               <WechatOutlined style={{ fontSize: 18 }} /> {t('pricing.wechatPay')}
             </Tag>
           </Tooltip>
-          <Tooltip title={t('pricing.alipayTip')}>
-            <Tag color="blue" className="text-base px-3 py-1 cursor-pointer">
-              <AlipayCircleOutlined style={{ fontSize: 18 }} /> {t('pricing.alipay')}
+          <Tooltip title={t('pricing.creemTip')}>
+            <Tag color="purple" className="text-base px-3 py-1 cursor-pointer">
+              <CreditCardOutlined style={{ fontSize: 18 }} /> {t('pricing.creem')}
             </Tag>
           </Tooltip>
         </Space>
@@ -52,8 +47,6 @@ export default function PricingPage() {
         {PLAN_ORDER.map(plan => {
           const limits = getPlanLimits(plan);
           const price = getPrice(plan);
-          const yearlyMonthly = getYearlyMonthly(plan);
-
           return (
             <Col xs={24} sm={12} md={6} key={plan}>
               <Card className={`h-full ${plan === 'pro' ? 'ring-2 ring-indigo-500 shadow-xl' : ''}`}>
@@ -68,11 +61,6 @@ export default function PricingPage() {
                     </Title>
                     {price > 0 && <Text type="secondary">/{t('pricing.month')}</Text>}
                   </div>
-                  {price > 0 && (
-                    <Text type="secondary" className="text-xs">
-                      {t('pricing.yearlyMonthly', { price: yearlyMonthly })}
-                    </Text>
-                  )}
                 </div>
 
                 <Divider />

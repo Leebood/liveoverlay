@@ -554,6 +554,8 @@ export const en: Record<string, string> = {
   'planTest.yes': 'Yes',
   'pricing.alipay': 'Alipay',
   'pricing.alipayTip': 'Pay with Alipay',
+  'pricing.creem': 'Creem / Cards',
+  'pricing.creemTip': 'Visa / Mastercard / Apple Pay',
   'pricing.allTemplates': 'All Templates',
   'pricing.brandLogo': 'Brand Logo',
   'pricing.componentsUnit': 'components',
