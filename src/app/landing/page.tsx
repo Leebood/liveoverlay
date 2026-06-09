@@ -16,6 +16,7 @@ import {
   CodeOutlined,
 } from '@ant-design/icons';
 import { useI18n } from '@/i18n';
+import { getPlanLimits, type PlanType } from '@/lib/plan-limits';
 import LanguageSwitcher from '@/components/common/LanguageSwitcher';
 
 const { Title, Paragraph, Text } = Typography;
@@ -56,6 +57,28 @@ export default function LandingPage() {
       desc: t('landing.features.facebook.desc'),
     },
   ];
+
+  const pricingPlans: { key: PlanType; price: number; priceCNY: number; recommended?: boolean }[] = [
+    { key: 'free', price: 0, priceCNY: 0 },
+    { key: 'starter', price: 9, priceCNY: 59 },
+    { key: 'pro', price: 19, priceCNY: 129, recommended: true },
+    { key: 'business', price: 39, priceCNY: 269 },
+  ];
+  const formatPriceSimple = (amount: number) => {
+    if (amount === 0) return locale === 'en' ? '$0' : '¥0';
+    return locale === 'en' ? `$${amount}` : `¥${amount}`;
+  };
+  const getLowestPrice = () => {
+    return locale === 'en' ? '$9' : '¥59';
+  };
+  const planDisplayName = (plan: PlanType) => t(`plan.${plan}`);
+  const planShortFeature = (plan: PlanType) => {
+    if (plan === 'free') return locale === 'en' ? '1 template · 3 products' : '1 模板 · 3 商品';
+    if (plan === 'starter') return locale === 'en' ? '5 templates · 30 products' : '5 模板 · 30 商品';
+    if (plan === 'pro') return locale === 'en' ? 'All templates · 100 products' : '全部模板 · 100 商品';
+    return locale === 'en' ? 'Unlimited · Priority support' : '无限商品 · 优先支持';
+  };
+
 
   const steps = [
     t('landing.steps.1'),
@@ -218,6 +241,78 @@ export default function LandingPage() {
         </Row>
       </div>
 
+      {/* Pricing */}
+      <div style={{ padding: '60px 48px', background: '#fafafa' }}>
+        <div style={{ maxWidth: 1200, margin: '0 auto', textAlign: 'center' }}>
+          <Title level={2} style={{ marginBottom: 8 }}>{t('landing.pricingSection.title')}</Title>
+          <Paragraph style={{ color: '#666', fontSize: 16, marginBottom: 40 }}>
+            {t('landing.pricingSection.subtitle')}
+          </Paragraph>
+          <Row gutter={[16, 16]} justify="center" style={{ marginBottom: 24 }}>
+            {pricingPlans.map((plan) => (
+              <Col xs={24} sm={12} md={6} key={plan.key}>
+                <Card
+                  hoverable
+                  style={{
+                    height: '100%',
+                    borderColor: plan.recommended ? '#1677FF' : undefined,
+                    borderWidth: plan.recommended ? 2 : 1,
+                    position: 'relative',
+                  }}
+                  bodyStyle={{ padding: 24 }}
+                >
+                  {plan.recommended && (
+                    <div
+                      style={{
+                        position: 'absolute',
+                        top: -12,
+                        left: '50%',
+                        transform: 'translateX(-50%)',
+                        background: '#1677FF',
+                        color: '#fff',
+                        padding: '2px 12px',
+                        borderRadius: 12,
+                        fontSize: 12,
+                        fontWeight: 500,
+                      }}
+                    >
+                      {t('landing.pricingSection.recommended')}
+                    </div>
+                  )}
+                  <Title level={4} style={{ marginTop: 0, marginBottom: 12 }}>{planDisplayName(plan.key)}</Title>
+                  <div style={{ marginBottom: 8 }}>
+                    <span style={{ fontSize: 32, fontWeight: 700, color: plan.recommended ? '#1677FF' : '#333' }}>
+                      {formatPriceSimple(locale === 'en' ? plan.price : plan.priceCNY)}
+                    </span>
+                    {plan.key !== 'free' && (
+                      <Text type="secondary">{t('landing.pricingSection.perMonth')}</Text>
+                    )}
+                  </div>
+                  <Text type="secondary" style={{ display: 'block', marginBottom: 16 }}>
+                    {planShortFeature(plan.key)}
+                  </Text>
+                  <Button
+                    type={plan.recommended ? 'primary' : 'default'}
+                    block
+                    onClick={() => router.push(plan.key === 'free' ? '/register' : '/pricing')}
+                  >
+                    {plan.key === 'free' ? t('landing.pricingSection.startFree') : t('landing.pricingSection.choosePlan')}
+                  </Button>
+                </Card>
+              </Col>
+            ))}
+          </Row>
+          <div style={{ marginTop: 16 }}>
+            <Paragraph style={{ color: '#666', marginBottom: 16 }}>
+              {t('landing.pricingSection.fromPrice')} <Text strong style={{ color: '#1677FF' }}>{getLowestPrice()}</Text>{t('landing.pricingSection.perMonth')}
+            </Paragraph>
+            <Button type="link" size="large" onClick={() => router.push('/pricing')}>
+              {t('landing.pricingSection.seeAllPlans')} →
+            </Button>
+          </div>
+        </div>
+      </div>
+
       {/* Steps */}
       <div
         style={{
@@ -311,6 +406,7 @@ export default function LandingPage() {
         }}
       >
         <div style={{ marginBottom: 8 }}>
+          <a href="/terms" style={{ color: '#666', marginRight: 24 }}>{t('landing.termsOfService')}</a>
           <a href="/privacy" style={{ color: '#666', marginRight: 24 }}>{t('landing.privacyPolicy') || (locale === 'zh' ? '隐私政策' : 'Privacy Policy')}</a>
           <a href="mailto:leo.tikboost@gmail.com" style={{ color: '#666' }}>{t('landing.supportEmail') || (locale === 'zh' ? '技术支持' : 'Support')}: leo.tikboost@gmail.com</a>
         </div>
