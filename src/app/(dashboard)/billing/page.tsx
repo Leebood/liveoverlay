@@ -4,6 +4,7 @@ import { useState, useEffect, useRef } from 'react';
 import { Card, Row, Col, Button, Typography, Tag, Space, Divider, Radio, message, Modal, Spin, Result, Tooltip } from 'antd';
 import { CheckOutlined, CrownOutlined, WechatOutlined, LoadingOutlined, CloseOutlined, CreditCardOutlined } from '@ant-design/icons';
 import { useSession } from 'next-auth/react';
+import { useSearchParams } from 'next/navigation';
 import { getPlanLimits } from '@/lib/plan-limits';
 import PlanBadge from '@/components/common/PlanBadge';
 import { useI18n } from '@/i18n';
@@ -26,7 +27,19 @@ interface PlanFeature {
 export default function BillingPage() {
   const { t, locale } = useI18n();
   const { data: session, update: updateSession } = useSession();
+  const searchParams = useSearchParams();
   const planType = ((session?.user as Record<string, unknown>)?.planType || 'free') as PlanType;
+
+  // 处理支付成功后的跳转参数
+  useEffect(() => {
+    const success = searchParams.get('success');
+    const plan = searchParams.get('plan');
+    if (success === '1' && plan) {
+      message.success(t('billing.paySuccess'));
+      // 清除 URL 参数，避免刷新时重复显示
+      window.history.replaceState({}, '', '/dashboard/billing');
+    }
+  }, [searchParams, t]);
 
   // Locale-aware price display: en -> USD, zh -> CNY
   const currencySymbol = locale === 'en' ? '$' : '¥';

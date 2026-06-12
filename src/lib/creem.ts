@@ -108,7 +108,7 @@ export async function createCreemCheckout(
   const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://ailiveonline.com';
   const successUrl =
     request.successUrl ||
-    `${baseUrl}/${request.billingPeriod === 'yearly' ? '?period=yearly' : ''}`;
+    `${baseUrl}/dashboard/billing?success=1&plan=${request.planType}`;
 
   try {
     const response = await fetch(`${getApiUrl()}/checkouts`, {
